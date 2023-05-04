@@ -1,0 +1,1 @@
+"use strict";(self.webpackChunkkat_lego_github_io=self.webpackChunkkat_lego_github_io||[]).push([[3756],{3769:e=>{e.exports=JSON.parse('{"name":"docusaurus-plugin-content-docs","id":"default"}')}}]);
