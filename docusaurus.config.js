@@ -6,8 +6,8 @@ const darkCodeTheme = require('prism-react-renderer/themes/dracula');
 
 /** @type {import('@docusaurus/types').Config} */
 const config = {
-  title: 'Understanding the wheel',
-  tagline: 'The wheels of software',
+  title: 'Todo: new title',
+  tagline: 'Todo: new tagline',
   favicon: 'img/favicon.ico',
 
   // Set the production url of your site here
