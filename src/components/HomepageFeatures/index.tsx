@@ -15,7 +15,7 @@ const FeatureList: FeatureItem[] = [
     Svg: require('@site/static/img/undraw_docusaurus_mountain.svg').default,
     description: (
       <>
-        You went on the internet and found this. This is an account for interesting things I find in the world of software development.
+        You went on the internet and found this. This is an account for things I find interesting in the world of software development.
       </>
     ),
   },
