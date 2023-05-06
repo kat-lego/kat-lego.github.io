@@ -1,16 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <feed xmlns="http://www.w3.org/2005/Atom">
-    <id>https://blog.katlegomodupi.com/blog</id>
+    <id>https://katlegomodupi.com/blog</id>
     <title>I went to the internet and I found this... Blog</title>
     <updated>2023-05-04T00:00:00.000Z</updated>
     <generator>https://github.com/jpmonette/feed</generator>
-    <link rel="alternate" href="https://blog.katlegomodupi.com/blog"/>
+    <link rel="alternate" href="https://katlegomodupi.com/blog"/>
     <subtitle>I went to the internet and I found this... Blog</subtitle>
-    <icon>https://blog.katlegomodupi.com/https://pbs.twimg.com/profile_images/1614493443161481216/BaEvnInN_400x400.jpg</icon>
+    <icon>https://katlegomodupi.com/https://pbs.twimg.com/profile_images/1614493443161481216/BaEvnInN_400x400.jpg</icon>
     <entry>
         <title type="html"><![CDATA[Welcome]]></title>
-        <id>https://blog.katlegomodupi.com/blog/welcome</id>
-        <link href="https://blog.katlegomodupi.com/blog/welcome"/>
+        <id>https://katlegomodupi.com/blog/welcome</id>
+        <link href="https://katlegomodupi.com/blog/welcome"/>
         <updated>2023-05-04T00:00:00.000Z</updated>
         <summary type="html"><![CDATA[TODO: chatGPT generated text]]></summary>
         <content type="html"><![CDATA[<p>TODO: chatGPT generated text</p>]]></content>
