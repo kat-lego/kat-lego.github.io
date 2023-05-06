@@ -11,7 +11,7 @@ const config = {
   favicon: 'https://pbs.twimg.com/profile_images/1614493443161481216/BaEvnInN_400x400.jpg',
 
   // Set the production url of your site here
-  url: 'https://blog.katlegomodupi.com',
+  url: 'https://katlegomodupi.com',
   // Set the /<baseUrl>/ pathname under which your site is served
   // For GitHub pages deployment, it is often '/<projectName>/'
   baseUrl: '/',
