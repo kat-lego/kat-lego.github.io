@@ -1,6 +1,7 @@
 import React from 'react';
 import clsx from 'clsx';
 import styles from './styles.module.css';
+import Link from '@docusaurus/Link';
 
 type FeatureItem = {
   title: string;
@@ -14,7 +15,7 @@ const FeatureList: FeatureItem[] = [
     Svg: require('@site/static/img/undraw_docusaurus_mountain.svg').default,
     description: (
       <>
-        TODO: chatGPT generated text
+        You went on the internet and found this. This is an account for interesting things I find in the world of software development.
       </>
     ),
   },
@@ -23,7 +24,8 @@ const FeatureList: FeatureItem[] = [
     Svg: require('@site/static/img/undraw_docusaurus_tree.svg').default,
     description: (
       <>
-        TODO: chatGPT generated text
+        Touted as Katz Pyjamas. I am the Cat's Pyjamas of Software Development. What does that mean? I don't know.
+         Only Street cred I have is that I'm a software engineer of humble beginnings.
       </>
     ),
   },
@@ -32,7 +34,7 @@ const FeatureList: FeatureItem[] = [
     Svg: require('@site/static/img/undraw_docusaurus_react.svg').default,
     description: (
       <>
-        TODO: chatGPT generated text
+        Whim inspired by a blog by <Link to="/docs/intro">Chris Tacey Green</Link>
       </>
     ),
   },
