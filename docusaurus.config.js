@@ -8,7 +8,7 @@ const darkCodeTheme = require('prism-react-renderer/themes/dracula');
 const config = {
   title: 'I went to the internet and I found this...',
   tagline: 'Software Journalism by Katlego',
-  favicon: 'https://pbs.twimg.com/profile_images/1614493443161481216/BaEvnInN_400x400.jpg',
+  favicon: 'https://github.com/kat-lego.png',
 
   // Set the production url of your site here
   url: 'https://katlegomodupi.com',
@@ -64,12 +64,12 @@ const config = {
     /** @type {import('@docusaurus/preset-classic').ThemeConfig} */
     ({
       // Replace with your project's social card
-      image: 'img/docusaurus-social-card.jpg',
+      image: 'https://github.com/kat-lego.png',
       navbar: {
         title: 'I went to the internet and I found this...',
         logo: {
           alt: 'My Site Logo',
-          src: 'https://pbs.twimg.com/profile_images/1614493443161481216/BaEvnInN_400x400.jpg',
+          src: 'https://github.com/kat-lego.png',
         },
         items: [
         //   {
