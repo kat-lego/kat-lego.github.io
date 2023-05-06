@@ -6,9 +6,9 @@ const darkCodeTheme = require('prism-react-renderer/themes/dracula');
 
 /** @type {import('@docusaurus/types').Config} */
 const config = {
-  title: 'Todo: new title',
-  tagline: 'Todo: new tagline',
-  favicon: 'img/favicon.ico',
+  title: 'I went to the internet and I found this...',
+  tagline: 'Software Journalism by Katlego',
+  favicon: 'https://pbs.twimg.com/profile_images/1614493443161481216/BaEvnInN_400x400.jpg',
 
   // Set the production url of your site here
   url: 'https://blog.katlegomodupi.com',
@@ -66,10 +66,10 @@ const config = {
       // Replace with your project's social card
       image: 'img/docusaurus-social-card.jpg',
       navbar: {
-        title: 'Todo: new title',
+        title: 'I went to the internet and I found this...',
         logo: {
           alt: 'My Site Logo',
-          src: 'https://github.com/kat-lego.png',
+          src: 'https://pbs.twimg.com/profile_images/1614493443161481216/BaEvnInN_400x400.jpg',
         },
         items: [
         //   {
@@ -129,7 +129,7 @@ const config = {
         //     ],
         //   },
         ],
-        copyright: `Copyright © ${new Date().getFullYear()} My Project, Inc. Built with Docusaurus.`,
+        copyright: `Copyright © ${new Date().getFullYear()} Katlego Modupi, Inc. Built with Docusaurus.`,
       },
       prism: {
         theme: lightCodeTheme,
