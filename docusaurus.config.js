@@ -7,7 +7,7 @@ const darkCodeTheme = require('prism-react-renderer/themes/dracula');
 /** @type {import('@docusaurus/types').Config} */
 const config = {
   title: 'I went to the internet and I found this...',
-  tagline: 'Software Journalism by Katlego',
+  tagline: 'finding out what is behind the screen',
   favicon: 'https://github.com/kat-lego.png',
 
   // Set the production url of your site here
