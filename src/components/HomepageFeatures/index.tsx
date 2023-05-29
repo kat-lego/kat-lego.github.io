@@ -1,6 +1,7 @@
 import React from 'react';
 import clsx from 'clsx';
 import styles from './styles.module.css';
+import Link from '@docusaurus/Link';
 
 type FeatureItem = {
   title: string;
@@ -10,32 +11,30 @@ type FeatureItem = {
 
 const FeatureList: FeatureItem[] = [
   {
-    title: 'Easy to Use',
+    title: 'What is this?',
     Svg: require('@site/static/img/undraw_docusaurus_mountain.svg').default,
     description: (
       <>
-        Docusaurus was designed from the ground up to be easily installed and
-        used to get your website up and running quickly.
+        You went on the internet and found this. This is an account for things I find interesting in the world of software development.
       </>
     ),
   },
   {
-    title: 'Focus on What Matters',
+    title: 'Who am I?',
     Svg: require('@site/static/img/undraw_docusaurus_tree.svg').default,
     description: (
       <>
-        Docusaurus lets you focus on your docs, and we&apos;ll do the chores. Go
-        ahead and move your docs into the <code>docs</code> directory.
+        Touted as Katz Pyjamas. I am the Cat's Pyjamas of Software Development. What does that mean? I don't know.
+         Only Street cred I have is that I'm a software engineer of humble beginnings.
       </>
     ),
   },
   {
-    title: 'Powered by React',
+    title: 'Why am I doing this?',
     Svg: require('@site/static/img/undraw_docusaurus_react.svg').default,
     description: (
       <>
-        Extend or customize your website layout by reusing React. Docusaurus can
-        be extended while reusing the same header and footer.
+        Whim inspired by a blog by <Link to="/docs/intro">Chris Tacey Green</Link>
       </>
     ),
   },
