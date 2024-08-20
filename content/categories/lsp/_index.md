@@ -1,6 +1,6 @@
 ---
-title: Example Category
-description: A description of this category
+title: LSP
+description: Language Server Protocol
 image:
 
 # Badge style
