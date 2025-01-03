@@ -1,4 +1,4 @@
-baseURL = 'http://blog.katlegomodupi.com/'
+baseURL = 'https://blog.katlegomodupi.com/'
 languageCode = 'en-us'
 title = 'kat stack'
 theme = 'risotto'
