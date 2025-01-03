@@ -4,6 +4,10 @@ title = 'kat stack'
 theme = 'risotto'
 author = "katlego modupi"
 
+languageCode = "en"
+DefaultContentLanguage = "en"
+enableInlineShortcodes = true
+
 paginate = 3
 
 # Automatically add content sections to main menu
