@@ -19,7 +19,6 @@ palette = "base16-dark"
 [params.about]
 title = "kat stack"
 description = "a kat stacked upon it self shall not stand"
-# unicode/emoji logo:
 logo = "🍚"
 
 [[params.socialLinks]]
