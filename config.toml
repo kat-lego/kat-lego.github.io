@@ -1,10 +1,9 @@
 baseURL = 'https://blog.katlegomodupi.com/'
-languageCode = 'en-us'
+languageCode = 'en'
 title = 'kat stack'
 theme = 'risotto'
 author = "katlego modupi"
 
-languageCode = "en"
 DefaultContentLanguage = "en"
 enableInlineShortcodes = true
 
