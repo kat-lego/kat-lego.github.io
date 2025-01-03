@@ -1,11 +1,11 @@
-# risotto
+# 🍚 risotto
 
 risotto is a minimalist, responsive [hugo](https://gohugo.io) theme inspired by terminal ricing aesthetics.
 
 [![Hugo Themes](https://img.shields.io/badge/Hugo_Themes-risotto-blue?logo=hugo)](https://themes.gohugo.io/themes/risotto/)
-[![Version](https://img.shields.io/badge/semver-v0.3.0-blue)](https://semver.org)
+[![Version](https://img.shields.io/badge/semver-v0.4.0-blue)](https://semver.org)
 ![hugo build status](https://github.com/joeroe/risotto/actions/workflows/hugo-build-exampleSite.yml/badge.svg)
-![W3C Validation](https://img.shields.io/w3c-validation/html?targetUrl=https%3A%2F%2Frisotto.joeroe.io)
+[![W3C Validation](https://img.shields.io/w3c-validation/html?targetUrl=https%3A%2F%2Frisotto.joeroe.io)](https://validator.nu/?doc=https%3A%2F%2Frisotto.joeroe.io)
 ![Code size](https://img.shields.io/github/languages/code-size/joeroe/risotto)
 
 ![Screenshot of the risotto theme](https://raw.githubusercontent.com/joeroe/risotto/master/images/screenshot.png)
@@ -19,12 +19,12 @@ risotto is a minimalist, responsive [hugo](https://gohugo.io) theme inspired by 
 
 ## Install
 
-The easiest way to install the theme is to [download the latest release](https://github.com/joeroe/risotto/releases/tag/release) and extract it to your project's `themes/` directory.
+The easiest way to install the theme is to [download the latest release](https://github.com/joeroe/risotto/releases) and extract it to your project's `themes/` directory.
 You can also clone this repository into your site's `themes` directory and checkout the latest release:
 
 ```shell
 git clone https://github.com/joeroe/risotto themes/risotto && cd themes/risotto
-rit checkout $(git tag -l | grep '^v[0-9.]*$' | sort -V | tail -n 1)
+git checkout $(git tag -l | grep '^v[0-9.]*$' | sort -V | tail -n 1)
 ```
 
 Note that this will not work if your site is itself a git repository.
@@ -39,13 +39,13 @@ cd themes/risotto
 git pull
 ```
 
-Otherwise, simply [download the latest release](https://github.com/joeroe/risotto/releases/tag/release) and extract it to your project's `themes/` directory, replacing the old version.
+Otherwise, simply [download the latest release](https://github.com/joeroe/risotto/releases) and extract it to your project's `themes/` directory, replacing the old version.
 
 ## Configure
 
-To use the theme, add `theme = 'risotto'` to your site's `config.toml`, or `theme: risotto` to your `config.yaml`.
+To use the theme, add `theme = 'risotto'` to your site's `hugo.toml`, or `theme: risotto` to your `hugo.yaml`.
 
-See `exampleSite/config.toml` for the theme-specific parameters you need to add to your site's `config.toml` or `config.yaml` to configure the theme.
+See `exampleSite/config.toml` for the theme-specific parameters you need to add to your site's `hugo.toml` or `hugo.yaml` to configure the theme.
 
 ### Colour schemes
 
@@ -86,7 +86,7 @@ For example:
 
 ```html
 <span class="base0A">Yellow text</span>
-<mark class="base0D">Text highlighted in green</mark>
+<mark class="bg-base0D">Text highlighted in green</mark>
 ```
 
 ## Favicon
