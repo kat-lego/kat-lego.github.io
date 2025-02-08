@@ -1,7 +1,7 @@
 +++
 author = "katlego modupi"
 title = "the budget app"
-date = "2025-02-01"
+date = "2026-05-01"
 description = "a simple budgeting app"
 tags = [
     "emoji",
