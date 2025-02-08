@@ -185,4 +185,4 @@ function M.setup()
 end
 ```
 
-And this Completes the stack.
+And this completes the stack.
