@@ -1,0 +1,111 @@
+<!doctype html><html lang=en><head><title>dotnet-nvim &ndash; kat stack</title>
+<meta name=description content="a kat stacked upon it self shall not stand"><meta name=viewport content="width=device-width,initial-scale=1"><meta charset=UTF-8><link rel=stylesheet href=https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css integrity="sha512-Kc323vGBEqzTmouAECnVceyQqyqdsSiqLQISBL29aUW4U/M7pSPA/gEUZQqv1cwx4OnYxTxve5UMg5GT6L4JJg==" crossorigin=anonymous referrerpolicy=no-referrer><link rel=stylesheet href=https://cdnjs.cloudflare.com/ajax/libs/academicons/1.9.4/css/academicons.min.css integrity="sha512-IW0nhlW5MgNydsXJO40En2EoCkTTjZhI3yuODrZIc8cQ4h1XcF53PsqDHa09NqnkXuIe0Oiyyj171BqZFwISBw==" crossorigin=anonymous referrerpolicy=no-referrer><link rel=stylesheet href=https://blog.katlegomodupi.com/css/palettes/base16-dark.css><link rel=stylesheet href=https://blog.katlegomodupi.com/css/risotto.css><link rel=stylesheet href=https://blog.katlegomodupi.com/css/custom.css></head><body><div class=page><header class=page__header><nav class="page__nav main-nav"><ul><li class=nomarker><h1 class=page__logo><a href=https://blog.katlegomodupi.com/ class=page__logo-inner>kat stack</a></h1></li><li class=main-nav__item><a class="nav-main-item active" href=https://blog.katlegomodupi.com/post/ title=Posts>Posts</a></li></ul></nav></header><section class=page__body><header class=content__header><h1>dotnet-nvim</h1></header><div class=content__body><p>A plug in for neovim that interfaces the dotnet cli command</p><p><a href=https://github.com/kat-lego/dotnet-nvim><img src="https://img.shields.io/badge/GitHub-Repo-blue?logo=github" alt="GitHub Repo"></a>
+<img src=https://img.shields.io/github/repo-size/kat-lego/dotnet-nvim alt="Repo Size">
+<img src=https://img.shields.io/badge/status-WIP-blue alt="Beta Version"></p><h2 id=the-pain-of-managing-package-references-and-solution-files>The Pain of Managing Package References and Solution Files</h2><p>Neovim is a fantastic editor that offers a keyboard-centric workflow. However, as a .NET developer, managing package references and solution files (.sln) can become cumbersome as I have to switch to a terminal. This post serves to show how neovim&rsquo;s extensibility allows me to simplify the annoyances in my workflow.</p><h2 id=the-issue-with-using-dotnet-args-or-terminal-dotnet-args>The Issue with Using <code>:!dotnet &lt;args></code> or <code>:terminal dotnet &lt;args></code></h2><p>A common workaround to interact with the dotnet CLI from within Neovim is to use the <code>:!dotnet &lt;args></code> or <code>:terminal dotnet &lt;args></code> commands. While functional, these methods have annoying drawbacks. They execute in the context of the directory you launched neovim in, this gets tedious if you have to type out long directory paths.</p><h2 id=requirements>Requirements</h2><p>We want to write a neovim plugin dubbed <code>dotnet-nvim</code> that will do the following:</p><ul><li>Execute the dotnet cli command when you run <code>:Dotnet</code>.</li><li>The <code>Dotnet</code> command should execute with the working directory for the active buffer.</li><li>There should be completions for the subcommands. i.e <code>dotnet sln</code>, <code>dotnet add</code>, <code>dotnet restore</code>,
+etc.</li><li>There should be completions for paths that follow in commands like <code>dotnet sln add</code>.</li></ul><h2 id=the-stack>The stack</h2><h3 id=plugin-project-structure>Plugin project structure</h3><p>First thing is first. The plugin will follow the following structure.</p><pre tabindex=0><code>dotnet-nvim/
+└─── lua/                # Lua modules for the plugin
+   └── dotnet-nvim/      # Main Lua file for the plugin
+       └─── init.lua     # Initialization and configuration
+</code></pre><h3 id=installing-it-on-your-local-nvim-lazy-vim-config>Installing it on your local nvim lazy vim config</h3><p>To test our plugin in we will install it using Lazy like so. In this example, I have my config setup
+such that each plugin is in its own file.</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-lua data-lang=lua><span style=display:flex><span><span style=color:#66d9ef>return</span> {
+</span></span><span style=display:flex><span>  dir <span style=color:#f92672>=</span> <span style=color:#e6db74>&#39;path/to/plugin/dotnet-nvim&#39;</span>,
+</span></span><span style=display:flex><span>  config <span style=color:#f92672>=</span> <span style=color:#66d9ef>function</span>()
+</span></span><span style=display:flex><span>    require(<span style=color:#e6db74>&#39;dotnet-nvim&#39;</span>).setup()
+</span></span><span style=display:flex><span>  <span style=color:#66d9ef>end</span>,
+</span></span><span style=display:flex><span>}
+</span></span></code></pre></div><h3 id=plugin-creating-the-dotnet-command>Plugin Creating the Dotnet command</h3><p>In the <code>init.lua</code> file for the plug in, we will add a function called setup, this is a function that
+will be used to setup the plugin. In this function we use the <code>vim.api.nvim_create_user_command</code>
+function to create a new command and set it up to print &lsquo;We are dotnetting&rsquo;.</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-lua data-lang=lua><span style=display:flex><span><span style=color:#66d9ef>local</span> M <span style=color:#f92672>=</span> {}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#66d9ef>function</span> <span style=color:#a6e22e>M</span>.<span style=color:#a6e22e>setup</span>()
+</span></span><span style=display:flex><span>  vim.api.nvim_create_user_command(<span style=color:#e6db74>&#39;Dotnet&#39;</span>, <span style=color:#66d9ef>function</span>(opts)
+</span></span><span style=display:flex><span>    print <span style=color:#e6db74>&#39;We are dotnetting&#39;</span>
+</span></span><span style=display:flex><span>  <span style=color:#66d9ef>end</span>, {})
+</span></span><span style=display:flex><span><span style=color:#66d9ef>end</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#66d9ef>return</span> M
+</span></span></code></pre></div><p>This should print the text &lsquo;We are dotnetting&rsquo; when you run <code>:Dotnet</code> after reloading nvim.</p><p>To actually run the dotnet command we will add a helper function for running commands to the command
+line.</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-lua data-lang=lua><span style=display:flex><span><span style=color:#75715e>-- Helper function to run shell commands and capture output</span>
+</span></span><span style=display:flex><span><span style=color:#66d9ef>local</span> <span style=color:#66d9ef>function</span> <span style=color:#a6e22e>run_command</span>(cmd, cwd)
+</span></span><span style=display:flex><span>  <span style=color:#66d9ef>local</span> handle
+</span></span><span style=display:flex><span>  <span style=color:#66d9ef>if</span> cwd <span style=color:#66d9ef>then</span>
+</span></span><span style=display:flex><span>    <span style=color:#75715e>-- io.popen is used to start a new process to run the command</span>
+</span></span><span style=display:flex><span>    handle <span style=color:#f92672>=</span> assert(io.popen(<span style=color:#e6db74>&#39;cd &#39;</span> <span style=color:#f92672>..</span> vim.fn.shellescape(cwd) <span style=color:#f92672>..</span> <span style=color:#e6db74>&#39; &amp;&amp; &#39;</span> <span style=color:#f92672>..</span> cmd, <span style=color:#e6db74>&#39;r&#39;</span>))
+</span></span><span style=display:flex><span>  <span style=color:#66d9ef>else</span>
+</span></span><span style=display:flex><span>    handle <span style=color:#f92672>=</span> assert(io.popen(cmd, <span style=color:#e6db74>&#39;r&#39;</span>))
+</span></span><span style=display:flex><span>  <span style=color:#66d9ef>end</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>  <span style=color:#75715e>-- we read the output from the process stdout here</span>
+</span></span><span style=display:flex><span>  <span style=color:#66d9ef>local</span> result <span style=color:#f92672>=</span> handle:read <span style=color:#e6db74>&#39;*a&#39;</span>
+</span></span><span style=display:flex><span>  handle:close()
+</span></span><span style=display:flex><span>  <span style=color:#66d9ef>return</span> result
+</span></span><span style=display:flex><span><span style=color:#66d9ef>end</span>
+</span></span></code></pre></div><p>We will update our setup function to use the <code>run_command</code> function as follows:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-lua data-lang=lua><span style=display:flex><span><span style=color:#66d9ef>function</span> <span style=color:#a6e22e>M</span>.<span style=color:#a6e22e>setup</span>()
+</span></span><span style=display:flex><span>  vim.api.nvim_create_user_command(<span style=color:#e6db74>&#39;Dotnet&#39;</span>, <span style=color:#66d9ef>function</span>(opts)
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>local</span> cmd <span style=color:#f92672>=</span> <span style=color:#e6db74>&#39;dotnet &#39;</span> <span style=color:#f92672>..</span> table.concat(opts.fargs, <span style=color:#e6db74>&#39; &#39;</span>)
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>local</span> cwd <span style=color:#f92672>=</span> vim.fn.expand <span style=color:#e6db74>&#39;%:p:h&#39;</span>
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>local</span> output <span style=color:#f92672>=</span> run_command(cmd, cwd)
+</span></span><span style=display:flex><span>    vim.api.nvim_out_write(output <span style=color:#f92672>..</span> <span style=color:#e6db74>&#39;</span><span style=color:#ae81ff>\n</span><span style=color:#e6db74>&#39;</span>)
+</span></span><span style=display:flex><span>  <span style=color:#66d9ef>end</span>, {
+</span></span><span style=display:flex><span>    nargs <span style=color:#f92672>=</span> <span style=color:#e6db74>&#39;*&#39;</span>, <span style=color:#75715e>-- Accept multiple arguments</span>
+</span></span><span style=display:flex><span>  })
+</span></span><span style=display:flex><span><span style=color:#66d9ef>end</span>
+</span></span></code></pre></div><ol><li>Notice we have added <code>nargs = '*'</code> to the last parameter of <code>vim.api.nvim_create_user_command</code>.</li><li>We are using <code>vim.fn.expand '%:p:h'</code> to get the path for the current buffer.</li></ol><p>And with that we are able to run the dotnet command within nvim.</p><h3 id=add-completions>Add completions</h3><p>We will now add a function that will handle the completions. We will now add a function that will handle the completions. This function takes in user input and provides relevant suggestions based on the context of the dotnet command being executed.</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-lua data-lang=lua><span style=display:flex><span><span style=color:#66d9ef>local</span> <span style=color:#66d9ef>function</span> <span style=color:#a6e22e>complete_dotnet</span>(arg_lead, cmd_line)
+</span></span><span style=display:flex><span>  <span style=color:#66d9ef>local</span> args <span style=color:#f92672>=</span> vim.split(cmd_line, <span style=color:#e6db74>&#39;%s+&#39;</span>)
+</span></span><span style=display:flex><span>  <span style=color:#66d9ef>local</span> context <span style=color:#f92672>=</span> args[<span style=color:#ae81ff>2</span>] <span style=color:#f92672>or</span> <span style=color:#e6db74>&#39;&#39;</span>
+</span></span><span style=display:flex><span>  <span style=color:#66d9ef>local</span> completions <span style=color:#f92672>=</span> {}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>  <span style=color:#75715e>-- Complete &#39;dotnet add&#39; and &#39;dotnet sln&#39; with .csproj files or packages</span>
+</span></span><span style=display:flex><span>  <span style=color:#66d9ef>if</span> context <span style=color:#f92672>==</span> <span style=color:#e6db74>&#39;add&#39;</span> <span style=color:#f92672>and</span> args[<span style=color:#ae81ff>3</span>] <span style=color:#f92672>==</span> <span style=color:#e6db74>&#39;reference&#39;</span> <span style=color:#66d9ef>then</span>
+</span></span><span style=display:flex><span>    completions <span style=color:#f92672>=</span> get_path_completions(args[<span style=color:#ae81ff>4</span>] <span style=color:#f92672>or</span> <span style=color:#e6db74>&#39;&#39;</span>)
+</span></span><span style=display:flex><span>  <span style=color:#66d9ef>elseif</span> context <span style=color:#f92672>==</span> <span style=color:#e6db74>&#39;sln&#39;</span> <span style=color:#f92672>and</span> (args[<span style=color:#ae81ff>3</span>] <span style=color:#f92672>==</span> <span style=color:#e6db74>&#39;add&#39;</span> <span style=color:#f92672>or</span> args[<span style=color:#ae81ff>3</span>] <span style=color:#f92672>==</span> <span style=color:#e6db74>&#39;remove&#39;</span>) <span style=color:#66d9ef>then</span>
+</span></span><span style=display:flex><span>    completions <span style=color:#f92672>=</span> get_path_completions(args[<span style=color:#ae81ff>4</span>] <span style=color:#f92672>or</span> <span style=color:#e6db74>&#39;&#39;</span>)
+</span></span><span style=display:flex><span>  <span style=color:#66d9ef>else</span>
+</span></span><span style=display:flex><span>    <span style=color:#75715e>-- General dotnet commands</span>
+</span></span><span style=display:flex><span>    completions <span style=color:#f92672>=</span> {
+</span></span><span style=display:flex><span>      <span style=color:#e6db74>&#39;sln&#39;</span>,
+</span></span><span style=display:flex><span>      <span style=color:#e6db74>&#39;new&#39;</span>,
+</span></span><span style=display:flex><span>      <span style=color:#e6db74>&#39;build&#39;</span>,
+</span></span><span style=display:flex><span>      <span style=color:#e6db74>&#39;run&#39;</span>,
+</span></span><span style=display:flex><span>      <span style=color:#e6db74>&#39;test&#39;</span>,
+</span></span><span style=display:flex><span>      <span style=color:#e6db74>&#39;publish&#39;</span>,
+</span></span><span style=display:flex><span>      <span style=color:#e6db74>&#39;restore&#39;</span>,
+</span></span><span style=display:flex><span>      <span style=color:#e6db74>&#39;clean&#39;</span>,
+</span></span><span style=display:flex><span>      <span style=color:#e6db74>&#39;add&#39;</span>,
+</span></span><span style=display:flex><span>    }
+</span></span><span style=display:flex><span>  <span style=color:#66d9ef>end</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>  <span style=color:#66d9ef>local</span> matches <span style=color:#f92672>=</span> {}
+</span></span><span style=display:flex><span>  <span style=color:#66d9ef>for</span> _, item <span style=color:#66d9ef>in</span> ipairs(completions) <span style=color:#66d9ef>do</span>
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>if</span> item:match(<span style=color:#e6db74>&#39;^&#39;</span> <span style=color:#f92672>..</span> vim.pesc(arg_lead)) <span style=color:#66d9ef>then</span>
+</span></span><span style=display:flex><span>      table.insert(matches, item)
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>end</span>
+</span></span><span style=display:flex><span>  <span style=color:#66d9ef>end</span>
+</span></span><span style=display:flex><span>  <span style=color:#66d9ef>return</span> matches
+</span></span><span style=display:flex><span><span style=color:#66d9ef>end</span>
+</span></span></code></pre></div><p>Completions for dotnet subcommands are just a static list. We also have completions for file paths
+when we run commands like <code>dotnet sln add</code>. Here Is The implementation of the <code>get_path_completions</code>
+function that is used for this.</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-lua data-lang=lua><span style=display:flex><span><span style=color:#75715e>-- Helper function to list directories and files under a given path</span>
+</span></span><span style=display:flex><span><span style=color:#66d9ef>local</span> <span style=color:#66d9ef>function</span> <span style=color:#a6e22e>get_path_completions</span>(input)
+</span></span><span style=display:flex><span>  <span style=color:#66d9ef>local</span> path <span style=color:#f92672>=</span> input <span style=color:#f92672>==</span> <span style=color:#e6db74>&#39;&#39;</span> <span style=color:#f92672>and</span> <span style=color:#e6db74>&#39;./&#39;</span> <span style=color:#f92672>or</span> input
+</span></span><span style=display:flex><span>  <span style=color:#66d9ef>local</span> abs_path <span style=color:#f92672>=</span> vim.fn.fnamemodify(path, <span style=color:#e6db74>&#39;:p&#39;</span>)
+</span></span><span style=display:flex><span>  <span style=color:#66d9ef>local</span> dir <span style=color:#f92672>=</span> vim.fn.isdirectory(abs_path) <span style=color:#f92672>==</span> <span style=color:#ae81ff>1</span> <span style=color:#f92672>and</span> abs_path <span style=color:#f92672>or</span> vim.fn.fnamemodify(abs_path, <span style=color:#e6db74>&#39;:h&#39;</span>)
+</span></span><span style=display:flex><span>  <span style=color:#66d9ef>local</span> items <span style=color:#f92672>=</span> vim.fn.globpath(dir, <span style=color:#e6db74>&#39;*&#39;</span>, <span style=color:#66d9ef>false</span>, <span style=color:#66d9ef>true</span>)
+</span></span><span style=display:flex><span>  <span style=color:#66d9ef>return</span> vim.tbl_map(<span style=color:#66d9ef>function</span>(item)
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>return</span> vim.fn.fnamemodify(item, <span style=color:#e6db74>&#39;:.&#39;</span>)
+</span></span><span style=display:flex><span>  <span style=color:#66d9ef>end</span>, items)
+</span></span><span style=display:flex><span><span style=color:#66d9ef>end</span>
+</span></span></code></pre></div><p>We bring all of this together by passing an option in the <code>vim.api.nvim_create_user_command</code>
+function.</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-lua data-lang=lua><span style=display:flex><span><span style=color:#66d9ef>function</span> <span style=color:#a6e22e>M</span>.<span style=color:#a6e22e>setup</span>()
+</span></span><span style=display:flex><span>  vim.api.nvim_create_user_command(<span style=color:#e6db74>&#39;Dotnet&#39;</span>, <span style=color:#66d9ef>function</span>(opts)
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>local</span> cmd <span style=color:#f92672>=</span> <span style=color:#e6db74>&#39;dotnet &#39;</span> <span style=color:#f92672>..</span> table.concat(opts.fargs, <span style=color:#e6db74>&#39; &#39;</span>)
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>local</span> cwd <span style=color:#f92672>=</span> vim.fn.expand <span style=color:#e6db74>&#39;%:p:h&#39;</span>
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>local</span> output <span style=color:#f92672>=</span> run_command(cmd, cwd)
+</span></span><span style=display:flex><span>    vim.api.nvim_out_write(output <span style=color:#f92672>..</span> <span style=color:#e6db74>&#39;</span><span style=color:#ae81ff>\n</span><span style=color:#e6db74>&#39;</span>)
+</span></span><span style=display:flex><span>  <span style=color:#66d9ef>end</span>, {
+</span></span><span style=display:flex><span>    nargs <span style=color:#f92672>=</span> <span style=color:#e6db74>&#39;*&#39;</span>, <span style=color:#75715e>-- Accept multiple arguments</span>
+</span></span><span style=display:flex><span>    complete <span style=color:#f92672>=</span> complete_dotnet,
+</span></span><span style=display:flex><span>  })
+</span></span><span style=display:flex><span><span style=color:#66d9ef>end</span>
+</span></span></code></pre></div><p>And this completes the stack.</p></div><footer class=content__footer></footer></section><section class=page__aside><div class=aside__about><div class=aside__about><span class=about__logo role=img>🍚</span>&nbsp;<h1 class=about__title>kat stack</h1><p class=about__description>a kat stacked upon it self shall not stand</p></div><ul class=aside__social-links><li><a href=https://github.com/kat-lego rel=me aria-label=GitHub title=GitHub><i class="fa-brands fa-github" aria-hidden=true></i></a>&nbsp;</li></ul></div><hr><div class=aside__content><p>nvim plugin for the dotnet command</p><p>By katlego modupi,
+2025-02-08</p></div></section><footer class=page__footer><p><br><span class=active><br><b></b></span><br></p><br><br><p class=copyright></p><p class=advertisement>Powered by <a href=https://gohugo.io/>hugo</a> and <a href=https://github.com/joeroe/risotto>risotto</a>.</p></footer></div></body></html>
