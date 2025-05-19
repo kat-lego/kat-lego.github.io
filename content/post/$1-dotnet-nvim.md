@@ -1,18 +1,16 @@
 +++
 author = "katlego modupi"
 title = "dotnet-nvim"
-date = "2025-02-08"
+date = "2025-06-01"
 description = "nvim plugin for the dotnet command"
 tags = [
-    "nvim", "dotnet"
+    "nvim", "dotnet", "lua"
 ]
 +++
 
-A plug in for neovim that interfaces the dotnet cli command
+A plug in for neovim that interfaces the dotnet cli command.
 
-[![GitHub Repo](https://img.shields.io/badge/GitHub-Repo-blue?logo=github)](https://github.com/kat-lego/dotnet-nvim)
-![Repo Size](https://img.shields.io/github/repo-size/kat-lego/dotnet-nvim)
-![Beta Version](https://img.shields.io/badge/status-WIP-blue)
+[![github repo](https://img.shields.io/badge/dotnet_nvim-gray?logo=github)](https://github.com/kat-lego/dotnet-nvim)
 <!--more-->
 
 ## The Pain of Managing Package References and Solution Files
@@ -73,7 +71,7 @@ return M
 
 This should print the text 'We are dotnetting' when you run `:Dotnet` after reloading nvim.
 
-To actually run the dotnet command we will add a helper function for running commands to the command
+To actually run the `dotnet` command we will add a helper function for running commands to the command
 line.
 ```lua
 -- Helper function to run shell commands and capture output
@@ -99,8 +97,7 @@ function M.setup()
   vim.api.nvim_create_user_command('Dotnet', function(opts)
     local cmd = 'dotnet ' .. table.concat(opts.fargs, ' ')
     local cwd = vim.fn.expand '%:p:h'
-    local output = run_command(cmd, cwd)
-    vim.api.nvim_out_write(output .. '\n')
+    print(run_command(cmd, cwd) .. '\n')
   end, {
     nargs = '*', -- Accept multiple arguments
   })
@@ -108,12 +105,15 @@ end
 ```
   
   1. Notice we have added `nargs = '*'` to the last parameter of `vim.api.nvim_create_user_command`.
+  This allows the command to accept multiple arguments
   2. We are using `vim.fn.expand '%:p:h'` to get the path for the current buffer.
 
 And with that we are able to run the dotnet command within nvim.
 
 ### Add completions
-We will now add a function that will handle the completions. We will now add a function that will handle the completions. This function takes in user input and provides relevant suggestions based on the context of the dotnet command being executed.
+We will now add a function that will handle the completions. We will now add a function that will
+handle the completions. This function takes in user input and provides relevant suggestions based on
+the context of the dotnet command being executed.
 
 ```lua
 local function complete_dotnet(arg_lead, cmd_line)
@@ -121,13 +121,21 @@ local function complete_dotnet(arg_lead, cmd_line)
   local context = args[2] or ''
   local completions = {}
 
-  -- Complete 'dotnet add' and 'dotnet sln' with .csproj files or packages
-  if context == 'add' and args[3] == 'reference' then
-    completions = get_path_completions(args[4] or '')
-  elseif context == 'sln' and (args[3] == 'add' or args[3] == 'remove') then
-    completions = get_path_completions(args[4] or '')
+  local cwd = vim.fn.expand '%:p:h'
+
+  if context == 'add' then
+    if args[3] == 'reference' then
+      completions = get_path_completions(cwd, args[4] or '')
+    else
+      completions = { 'reference', 'package' }
+    end
+  elseif context == 'sln' then
+    if args[3] == 'add' or args[3] == 'remove' then
+      completions = get_path_completions(cwd, args[4] or '')
+    else
+      completions = { 'add', 'remove' }
+    end
   else
-    -- General dotnet commands
     completions = {
       'sln',
       'new',
@@ -157,14 +165,17 @@ function that is used for this.
 
 ```lua
 -- Helper function to list directories and files under a given path
-local function get_path_completions(input)
-  local path = input == '' and './' or input
-  local abs_path = vim.fn.fnamemodify(path, ':p')
-  local dir = vim.fn.isdirectory(abs_path) == 1 and abs_path or vim.fn.fnamemodify(abs_path, ':h')
-  local items = vim.fn.globpath(dir, '*', false, true)
-  return vim.tbl_map(function(item)
-    return vim.fn.fnamemodify(item, ':.')
-  end, items)
+function get_path_completions(path, prefix)
+  local itemsString = vim.fn.glob(path .. '/' .. prefix .. '*')
+  local items = vim.split(itemsString, '\n', { trimempty = true })
+
+  local matches = {}
+
+  for _, item in ipairs(items) do
+    table.insert(matches, string.sub(item, #path + 2))
+  end
+
+  return matches
 end
 
 ```
