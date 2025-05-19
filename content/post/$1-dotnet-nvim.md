@@ -1,7 +1,7 @@
 +++
 author = "katlego modupi"
 title = "dotnet-nvim"
-date = "2025-06-01"
+date = "2025-05-18"
 description = "nvim plugin for the dotnet command"
 tags = [
     "nvim", "dotnet", "lua"
@@ -196,4 +196,4 @@ function M.setup()
 end
 ```
 
-And this completes the stack.
+And this completes the stack. Have a look at the [complete solution](https://github.com/kat-lego/dotnet-nvim) which includes completions for nuget packages and includes some rules on running the command at a solution level for some commands.
