@@ -3,6 +3,7 @@ author = "katlego modupi"
 title = "acc shared memory"
 date = "2025-06-09"
 description = "exploring acc shared memory to record laptime data"
+draft = true
 tags = [
     "go", "acc",
 ]

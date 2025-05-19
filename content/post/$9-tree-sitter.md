@@ -1,8 +1,9 @@
 +++
 author = "katlego modupi"
 title = "tree-sitter"
-date = "2025-06-08"
+date = "2026-06-08"
 description = "a tool for generating parsers for grammars"
+draft = true
 tags = [
     "grammars",
     "tree-sitter",

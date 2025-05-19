@@ -1,7 +1,8 @@
 +++
 author = "katlego modupi"
 title = "language server protocol"
-date = "2025-06-15"
+date = "2026-06-15"
+draft = true
 description = "protocol for how a server and client (text editor or ide) may communicate to provide code intelisense"
 tags = [
     "lsp",

@@ -1,8 +1,9 @@
 +++
 author = "katlego modupi"
 title = "result.mini"
-date = "2025-06-22"
+date = "2025-05-25"
 description = "yet another result type for c#"
+draft = true
 tags = [
     "dotnet", "c#"
 ]
