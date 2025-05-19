@@ -7,8 +7,7 @@ author = "katlego modupi"
 DefaultContentLanguage = "en"
 enableInlineShortcodes = true
 
-[pagination]
-pagerSize = 3
+paginate = 3
 
 # Automatically add content sections to main menu
 sectionPagesMenu = "main"
@@ -54,7 +53,7 @@ unsafe = true
     disabled = false
     simple = true
 
-  [privacy.x.twitter]
+  [privacy.twitter]
     disabled = false
     enableDNT = true
     simple = true
@@ -72,5 +71,5 @@ unsafe = true
   [services.instagram]
     disableInlineCSS = true
 
-  [services.x]
+  [services.twitter]
     disableInlineCSS = true
