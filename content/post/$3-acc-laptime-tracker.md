@@ -252,12 +252,16 @@ API is running on a docker container and was developed in go, using go gin as th
 handles the requests. You can check it out at `TODO: add webshield image with link`. All the API
 does is expose a GET endpoint which retrieves the 20 most recent session data and no more.
 
-#### Rate limiting the api
+#### protecting the database
+TODO
+
+#### protecting the api
 TODO
 
 ### web ui
-To present the lap data, I have built a static website
+As a way to present the data, I have build a static website. In service of furthering my golang
+theme, I have decided to choose the wrong tool for the job, Hugo.
 
-### shell ui ()
+### shell ui (bonus)
 
 And this completes the stack.
