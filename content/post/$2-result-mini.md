@@ -14,18 +14,17 @@ Writing yet another result type for c#.
 [![nuget](https://img.shields.io/badge/result.mini-gray?logo=nuget)](https://www.nuget.org/packages/Result.Mini)
 <!--more-->
 
-I decided to write yet another result type for c#. A generic type used to encapsulate the result of
-function calls as either a success of failure.
+I decided to write yet another result type for c#. A generic type used to encapsulate the result of a
+function call as either a success or failure.
 
 ## why?
-This is simply a ploy to talk about one of the many topics I find interesting (error handling), as well as show casing some cool features of c#.
+This is simply a ploy to talk about one of the many topics I find interesting (error handling), as well as showcasing some cool features of c#.
 
 ## requirements
-Imagine we have a function that make a call to a weather api, which uses an http client. The http
-client may throw a number of exceptions. The GetWeather function may want to catch these exceptions
-and re-package them in a way that makes sense in the application's context. For example it may
-throw a RetryableErrorException or FatalErrorException if that's all that matters to the function's
-consumers.
+Imagine we have a function that makes a call to a weather api, which uses an HTTP client. The HTTP 
+client may throw any one of several exceptions. The GetWeather function may want to catch these exceptions and re-package them in a way that makes sense in the application's context. For example, 
+it might throw a RetryableErrorException or FatalErrorException if that's all that matters to the 
+function's consumers.
 
 ```cs
 public async Task<WeatherData> GetWeatherAsync()
@@ -52,12 +51,12 @@ public async Task<WeatherData> GetWeatherAsync()
 ```
 
 This abstracts away the internals of the GetWeather function, the GetWeather function may as well
-be getting it's information from a file that has to be updated by the intern with his own sets of
+be getting its information from a file that has to be updated by the intern with his own sets of
 problems to deal with. I like this.
 
 Suppose we have a Background service called SkyDivingPricingRevisionWorker which is supposed to
-call GetWeather and call CalculatePrice with the output from the weather. If there is an error that
-is not retryable the service should call a SendPagerAlert function. 
+call GetWeather and CalculatePrice with the output from the weather. If there is an error that
+is not retryable the service should call a SendPagerAlert function.
 
 ```cs
 public class SkyDivingPricingRevisionWorker : BackgroundService
@@ -91,13 +90,13 @@ public class SkyDivingPricingRevisionWorker : BackgroundService
 }
 ```
 
-In this example, we are now using exceptions to control logic flow. It is sufficient now, however
+In this example, we are now using exceptions to control logic flow. It is sufficient now, however,
 try/catch blocks aren't as versatile as if statements to control flow. For example:
 
-- nesting try catch blocks is more cursed than nesting if statements.
+- nested try-catch blocks are more cursed than nested if statements.
 - can't do an inverted if/else to exit early
 
-In this stack, we will swap this out for the result pattern to look like this
+In this stack, we will swap this out for the result pattern to look like this.
 
 `GetWeather`
 ```cs
@@ -164,7 +163,7 @@ public class SkyDivingPricingRevisionWorker : BackgroundService
 }
 ```
 
-This approach makes control flow clearer and more predictable. Instead of catching exceptions,
+This approach makes the control flow clearer and more predictable. Instead of catching exceptions,
 we handle results directly—making the code easier to follow, test, and extend.
 
 ## the stack
@@ -251,8 +250,8 @@ public void Deconstruct(out T? data, out IEnumerable<Error> errors)
 }
 ```
 
-This allows us to unpack a result object into a tuple (data, errors), which in turn allow us to have
-a go style way of error handling.
+This allows us to unpack a result object into a tuple (data, errors), which in turn allows us to have
+a go-style way of error handling.
 
 And that completes the stack. Ironically, you can just have your functions return the tuple (T,
 errors) to begin with.

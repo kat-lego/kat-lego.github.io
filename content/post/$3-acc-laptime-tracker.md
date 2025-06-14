@@ -14,11 +14,11 @@ Building a program to track my lap times in assetto corsa competizione.
 [![github repo](https://img.shields.io/badge/acc_laptime_tracker-gray?logo=github)](https://github.com/kat-lego/acc-laptime-tracker)
 <!--more-->
 
-Some time last year, I decided to invest money on Assetto Corsa Competizione and a racing wheel. I
+Sometime last year, I decided to invest money in Assetto Corsa Competizione and a racing wheel. I
 have had a hard time investing the time it takes to 'git gud'. Now is the time I feed into my
 delusions of grandeur and top the lap times. But first, I will need a bespoke lap time tracker.
 
-## why ?
+## why?
 
 Glory, Fame and Prestige.
 
@@ -34,20 +34,20 @@ At a high level, I need the following:
 
 ## the stack
 
-In this stack, I will be using golang to build the program. No justification will be given at this
+In this stack, I will be using Golang to build the program. No justification will be given for this decision at this
 time.
 
 ### live data
-As mentioned ACC exposes its game data through a shared memory interface. The interface consists of
-3 memory mapped files it creates.
+As mentioned, ACC exposes its game data through a shared memory interface. The interface consists of
+3 memory-mapped files it creates.
 
 #### memory mapped file
 A memory-mapped file is a mechanism that maps the contents of a file (or a portion of it) directly
 into a process's virtual memory space. This allows the application to read from and write to the
-file as if it were accessing regular memory (RAM), rather than using traditional file I/O functions
+file as if it were accessing regular memory (RAM) rather than using traditional file I/O functions
 like `read()` or `write()`.
 
-This is how it works:
+Here is how it works:
 
 * Given the file you want to map
 
@@ -86,7 +86,7 @@ Process Virtual Address Space
     * Load the required part of the file into RAM
     * Update the page table to reflect this mapping
 
-* ACC uses a non persistent memory file, which means the file only exists loaded on to physical RAM.
+* ACC uses a non-persistent memory file, which means the file only exists on physical RAM.
 
 #### api overview
 The Assetto Corsa Competizione shared memory interface provides 3 memory files, being:
@@ -105,14 +105,15 @@ This is how we will be reading the data from ACC's shared memory.
 ```go
 func ReadSharedMemoryStruct[T any](name string) (*T, error)
 ```
-2. Load windows kernel dll to get access to `OpenFileMappingW` and `MapViewOfFile` from the
+2. Load Windows kernel dll to get access to `OpenFileMappingW` and `MapViewOfFile` from the
    windows api
 
 3. Use Open the shared memory file exposed by the game (via Windows' `CreateFileMappingW` )
 4. Map the data to the go process (via Windows `MapViewOfFile`)
 5. Cast the raw byte slice to a struct using `unsafe`.
 
-All in all the program looks like so
+All in all the program looks as follows
+
 ```go
 func ReadSharedMemoryStruct[T any](name string) (*T, error) {
 	namePtr, err := syscall.UTF16PtrFromString(name)

@@ -21,7 +21,7 @@ palette = "base16-dark"
 # Sidebar: about/bio
 [params.about]
 title = "kat stack"
-description = "a kat stacked upon it self shall not stand"
+description = "a kat stacked upon itself shall not stand"
 logo = "🍚"
 
 [[params.socialLinks]]

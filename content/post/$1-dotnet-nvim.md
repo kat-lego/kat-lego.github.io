@@ -14,23 +14,23 @@ A plug in for neovim that interfaces the dotnet cli command.
 <!--more-->
 
 ## The Pain of Managing Package References and Solution Files
-Neovim is a fantastic editor that offers a keyboard-centric workflow. However, as a .NET developer, managing package references and solution files (.sln) can become cumbersome as I have to switch to a terminal. This post serves to show how neovim's extensibility allows me to simplify the annoyances in my workflow.
+Neovim is a fantastic editor that offers a keyboard-centric workflow. However, as a .NET developer, managing package references and solution files (.sln) can become cumbersome as I have to switch to a terminal. This post demonstrates how Neovim's extensibility enables me to simplify the annoyances in my workflow.
 
 ## The Issue with Using `:!dotnet <args>` or `:terminal dotnet <args>`
-A common workaround to interact with the dotnet CLI from within Neovim is to use the `:!dotnet <args>` or `:terminal dotnet <args>` commands. While functional, these methods have annoying drawbacks. They execute in the context of the directory you launched neovim in, this gets tedious if you have to type out long directory paths.
+A common workaround for interacting with the .NET CLI from within Neovim is to use the `:!dotnet <args>` or `:terminal dotnet <args>` commands. While this works, there is a minor drawback. This method of interacting with dotnet commands execute in the context of the directory you launched Neovim. This gets tedious if you have to type out long directory paths.
 
 ## Requirements
-We want to write a neovim plugin dubbed `dotnet-nvim` that will do the following:
+We want to write a Neovim plugin dubbed `dotnet-nvim` that will do the following:
 * Execute the dotnet cli command when you run `:Dotnet`.
 * The `Dotnet` command should execute with the working directory for the active buffer.
 * There should be completions for the subcommands. i.e `dotnet sln`, `dotnet add`, `dotnet restore`,
-  etc.
-* There should be completions for paths that follow in commands like `dotnet sln add`.
+  Etc.
+* There should be completions for paths that follow commands like `dotnet sln add`.
 
 ## The stack
 
 ### Plugin project structure
-First thing is first. The plugin will follow the following structure.
+The first thing is first. The plugin will follow the following structure.
 
 ```
 dotnet-nvim/
@@ -40,8 +40,8 @@ dotnet-nvim/
 ```
 
 ### Installing it on your local nvim lazy vim config
-To test our plugin in we will install it using Lazy like so. In this example, I have my config setup
-such that each plugin is in its own file.
+To test our plugin, we will install it using Lazy like so. In this example, I have my config setup
+such that each plugin is in its file.
 
 ```lua
 return {
@@ -53,8 +53,8 @@ return {
 ```
 
 ### Plugin Creating the Dotnet command
-In the `init.lua` file for the plug in, we will add a function called setup, this is a function that 
-will be used to setup the plugin. In this function we use the `vim.api.nvim_create_user_command`
+In the `init.lua` file for the plugin, we will add a function called setup, this is a function that 
+will be used to setup the plugin. In this function, we use the `vim.api.nvim_create_user_command`
 function to create a new command and set it up to print 'We are dotnetting'.
 
 ```lua
@@ -71,7 +71,7 @@ return M
 
 This should print the text 'We are dotnetting' when you run `:Dotnet` after reloading nvim.
 
-To actually run the `dotnet` command we will add a helper function for running commands to the command
+To run the `dotnet` command we will add a helper function for running commands to the command
 line.
 ```lua
 -- Helper function to run shell commands and capture output
@@ -108,7 +108,7 @@ end
   This allows the command to accept multiple arguments
   2. We are using `vim.fn.expand '%:p:h'` to get the path for the current buffer.
 
-And with that we are able to run the dotnet command within nvim.
+And with that, we are able to run the dotnet command within nvim.
 
 ### Add completions
 We will now add a function that will handle the completions. We will now add a function that will
