@@ -1,0 +1,269 @@
+<!doctype html><html lang=en>
+<head><title>result.mini &ndash; kat stack</title>
+<meta name=description content="a kat stacked upon itself shall not stand">
+<meta name=viewport content="width=device-width,initial-scale=1">
+<meta charset=utf-8>
+<link rel=stylesheet href=https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css integrity="sha512-Kc323vGBEqzTmouAECnVceyQqyqdsSiqLQISBL29aUW4U/M7pSPA/gEUZQqv1cwx4OnYxTxve5UMg5GT6L4JJg==" crossorigin=anonymous referrerpolicy=no-referrer>
+<link rel=stylesheet href=https://cdnjs.cloudflare.com/ajax/libs/academicons/1.9.4/css/academicons.min.css integrity="sha512-IW0nhlW5MgNydsXJO40En2EoCkTTjZhI3yuODrZIc8cQ4h1XcF53PsqDHa09NqnkXuIe0Oiyyj171BqZFwISBw==" crossorigin=anonymous referrerpolicy=no-referrer>
+<link rel=stylesheet href=https://blog.katlegomodupi.com/css/palettes/base16-dark.css>
+<link rel=stylesheet href=https://blog.katlegomodupi.com/css/risotto.css>
+<link rel=stylesheet href=https://blog.katlegomodupi.com/css/custom.css>
+</head>
+<body>
+<div class=page>
+<header class=page__header><nav class="page__nav main-nav">
+<ul>
+<li class=nomarker><h1 class=page__logo><a href=https://blog.katlegomodupi.com/ class=page__logo-inner>kat stack</a></h1></li>
+<li class=main-nav__item><a class="nav-main-item active" href=https://blog.katlegomodupi.com/post/ title=Posts>Posts</a></li>
+</ul>
+</nav>
+</header>
+<section class=page__body>
+<header class=content__header>
+<h1>result.mini</h1>
+</header>
+<div class=content__body>
+<p>Writing yet another result type for c#.</p>
+<p><a href=https://github.com/kat-lego/result-mini><img src="https://img.shields.io/badge/result.mini-gray?logo=github" alt="github repo"></a>
+<a href=https://www.nuget.org/packages/Result.Mini><img src="https://img.shields.io/badge/result.mini-gray?logo=nuget" alt=nuget></a></p>
+<p>I decided to write yet another result type for c#. A generic type used to encapsulate the result of a
+function call as either a success or failure.</p>
+<h2 id=why>why?</h2>
+<p>This is simply a ploy to talk about one of the many topics I find interesting (error handling), as well as showcasing some cool features of c#.</p>
+<h2 id=requirements>requirements</h2>
+<p>Imagine we have a function that makes a call to a weather api, which uses an HTTP client. The HTTP
+client may throw any one of several exceptions. The GetWeather function may want to catch these exceptions and re-package them in a way that makes sense in the application&rsquo;s context. For example,
+it might throw a RetryableErrorException or FatalErrorException if that&rsquo;s all that matters to the
+function&rsquo;s consumers.</p>
+<div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-cs data-lang=cs><span style=color:#66d9ef>public</span> <span style=color:#66d9ef>async</span> Task&lt;WeatherData&gt; GetWeatherAsync()
+{
+    <span style=color:#66d9ef>try</span>
+    {
+        <span style=color:#66d9ef>var</span> response = <span style=color:#66d9ef>await</span> client.GetAsync(<span style=color:#e6db74>&#34;https://fakeweather.com/forecast&#34;</span>);
+
+        <span style=color:#66d9ef>var</span> content = <span style=color:#66d9ef>await</span> response.Content.ReadAsStringAsync();
+        <span style=color:#66d9ef>return</span> JsonSerializer.Deserialize&lt;WeatherData&gt;(content) 
+            ?? <span style=color:#66d9ef>throw</span> <span style=color:#66d9ef>new</span> FatalErrorException(<span style=color:#e6db74>&#34;Failed to parse weather data.&#34;</span>, <span style=color:#66d9ef>null</span>);
+    }
+    <span style=color:#66d9ef>catch</span> (HttpRequestException ex)
+    {
+        <span style=color:#66d9ef>throw</span> <span style=color:#66d9ef>new</span> RetryableErrorException(
+            <span style=color:#e6db74>&#34;Network error occurred while calling weather API.&#34;</span>, ex);
+    }
+    <span style=color:#66d9ef>catch</span> (JsonException ex)
+    {
+        <span style=color:#66d9ef>throw</span> <span style=color:#66d9ef>new</span> FatalErrorException(
+            <span style=color:#e6db74>&#34;Weather data response was malformed.&#34;</span>, ex);
+    }
+}
+</code></pre></div><p>This abstracts away the internals of the GetWeather function, the GetWeather function may as well
+be getting its information from a file that has to be updated by the intern with his own sets of
+problems to deal with. I like this.</p>
+<p>Suppose we have a Background service called SkyDivingPricingRevisionWorker which is supposed to
+call GetWeather and CalculatePrice with the output from the weather. If there is an error that
+is not retryable the service should call a SendPagerAlert function.</p>
+<div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-cs data-lang=cs><span style=color:#66d9ef>public</span> <span style=color:#66d9ef>class</span> <span style=color:#a6e22e>SkyDivingPricingRevisionWorker</span> : BackgroundService
+{
+    <span style=color:#66d9ef>protected</span> <span style=color:#66d9ef>override</span> <span style=color:#66d9ef>async</span> Task ExecuteAsync(CancellationToken stoppingToken)
+    {
+        <span style=color:#66d9ef>while</span> (!stoppingToken.IsCancellationRequested)
+        {
+            <span style=color:#66d9ef>try</span>
+            {
+                <span style=color:#66d9ef>var</span> weather = <span style=color:#66d9ef>await</span> weatherService.GetWeatherAsync();
+                <span style=color:#66d9ef>var</span> price = CalculatePrice(weather);
+                logger.LogInformation(<span style=color:#e6db74>&#34;Calculated new price: {Price}&#34;</span>, price);
+            }
+            <span style=color:#66d9ef>catch</span> (RetryableErrorException ex)
+            {
+                logger.LogWarning(ex, 
+                    <span style=color:#e6db74>&#34;Retryable error while retrieving weather data. Will try again later.&#34;</span>);
+            }
+            <span style=color:#66d9ef>catch</span> (FatalErrorException ex)
+            {
+                logger.LogError(ex, 
+                    <span style=color:#e6db74>&#34;Fatal error while retrieving weather data.&#34;</span>);
+                SendPagerAlert(
+                    <span style=color:#e6db74>&#34;Skydiving pricing failed due to weather service error.&#34;</span>);
+            }
+
+            <span style=color:#66d9ef>await</span> Task.Delay(TimeSpan.FromMinutes(<span style=color:#ae81ff>10</span>), stoppingToken);
+        }
+    }
+}
+</code></pre></div><p>In this example, we are now using exceptions to control logic flow. It is sufficient now, however,
+try/catch blocks aren&rsquo;t as versatile as if statements to control flow. For example:</p>
+<ul>
+<li>nested try-catch blocks are more cursed than nested if statements.</li>
+<li>can&rsquo;t do an inverted if/else to exit early</li>
+</ul>
+<p>In this stack, we will swap this out for the result pattern to look like this.</p>
+<p><code>GetWeather</code></p>
+<div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-cs data-lang=cs>
+<span style=color:#66d9ef>public</span> <span style=color:#66d9ef>async</span> Task&lt;Result&lt;WeatherData&gt;&gt; GetWeatherAsync()
+{
+    <span style=color:#66d9ef>try</span>
+    {
+        <span style=color:#66d9ef>var</span> response = <span style=color:#66d9ef>await</span> client.GetAsync(<span style=color:#e6db74>&#34;https://fakeweather.com/forecast&#34;</span>);
+
+        <span style=color:#66d9ef>var</span> content = <span style=color:#66d9ef>await</span> response.Content.ReadAsStringAsync();
+        <span style=color:#66d9ef>var</span> data = JsonSerializer.Deserialize&lt;WeatherData&gt;(content);
+        <span style=color:#66d9ef>if</span>(data != <span style=color:#66d9ef>null</span>)
+        {
+            <span style=color:#66d9ef>return</span> data
+        }
+        <span style=color:#66d9ef>return</span> <span style=color:#66d9ef>new</span> Error(Error.RetryableError, <span style=color:#e6db74>&#34;Failed to parse weather data.&#34;</span>);
+    }
+    <span style=color:#66d9ef>catch</span> (HttpRequestException ex)
+    {
+        <span style=color:#66d9ef>return</span> <span style=color:#66d9ef>new</span> Error(Error.RetryableError,
+            <span style=color:#e6db74>&#34;Network error occurred while calling weather API.&#34;</span>);
+    }
+    <span style=color:#66d9ef>catch</span> (JsonException ex)
+    {
+        <span style=color:#66d9ef>return</span> <span style=color:#66d9ef>new</span> Error(Error.FatalError, <span style=color:#e6db74>&#34;Weather data response was malformed.&#34;</span>);
+    }
+}
+</code></pre></div><p><code>SkyDivingPricingRevisionWorker</code></p>
+<div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-cs data-lang=cs><span style=color:#66d9ef>public</span> <span style=color:#66d9ef>class</span> <span style=color:#a6e22e>SkyDivingPricingRevisionWorker</span> : BackgroundService
+{
+    <span style=color:#66d9ef>protected</span> <span style=color:#66d9ef>override</span> <span style=color:#66d9ef>async</span> Task ExecuteAsync(CancellationToken stoppingToken)
+    {
+        <span style=color:#66d9ef>while</span> (!stoppingToken.IsCancellationRequested)
+        {
+            <span style=color:#66d9ef>var</span> (weather, error) = <span style=color:#66d9ef>await</span> weatherService.GetWeatherAsync();
+
+            <span style=color:#66d9ef>if</span>(error != <span style=color:#66d9ef>null</span> and error.Code == Error.RetryableException)
+            {
+                logger.LogWarning(ex,
+                    <span style=color:#e6db74>&#34;Retryable error while retrieving weather data. Will try again later.&#34;</span>);
+                <span style=color:#66d9ef>continue</span>;
+            }
+
+            <span style=color:#66d9ef>if</span>(error != <span style=color:#66d9ef>null</span> and error.Code == Error.RetryableException)
+            {
+                logger.LogError(ex,
+                    <span style=color:#e6db74>&#34;Fatal error while retrieving weather data.&#34;</span>);
+                SendPagerAlert(
+                    <span style=color:#e6db74>&#34;Skydiving pricing failed due to weather service error.&#34;</span>);
+                <span style=color:#66d9ef>continue</span>;
+            }
+
+            <span style=color:#66d9ef>var</span> price = CalculatePrice(weather);
+
+            logger.LogInformation(<span style=color:#e6db74>&#34;Calculated new price: {Price}&#34;</span>, price);
+
+            <span style=color:#66d9ef>await</span> Task.Delay(TimeSpan.FromMinutes(<span style=color:#ae81ff>10</span>), stoppingToken);
+        }
+    }
+}
+</code></pre></div><p>This approach makes the control flow clearer and more predictable. Instead of catching exceptions,
+we handle results directly—making the code easier to follow, test, and extend.</p>
+<h2 id=the-stack>the stack</h2>
+<p>Here is the Result type:</p>
+<div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-cs data-lang=cs><span style=color:#66d9ef>public</span> <span style=color:#66d9ef>struct</span> <span style=color:#a6e22e>Result</span>&lt;T&gt;
+{
+    <span style=color:#66d9ef>private</span> <span style=color:#66d9ef>readonly</span> T? data;
+    <span style=color:#66d9ef>private</span> <span style=color:#66d9ef>readonly</span> IEnumerable&lt;Error&gt; errors = [];
+
+    <span style=color:#66d9ef>private</span> Result(T data)
+    {
+        <span style=color:#66d9ef>this</span>.data = data;
+    }
+
+    <span style=color:#66d9ef>private</span> Result(IEnumerable&lt;Error&gt; errors)
+    {
+        errors = errors;
+        data = <span style=color:#66d9ef>default</span>;
+    }
+
+    <span style=color:#66d9ef>private</span> Result(Error error)
+    {
+        errors = [error];
+        data = <span style=color:#66d9ef>default</span>;
+    }
+
+    <span style=color:#66d9ef>public</span> <span style=color:#66d9ef>static</span> <span style=color:#66d9ef>implicit</span> <span style=color:#66d9ef>operator</span> Result&lt;T&gt;(T data)
+    {
+        <span style=color:#66d9ef>return</span> <span style=color:#66d9ef>new</span> Result&lt;T&gt;(data);
+    }
+
+    <span style=color:#66d9ef>public</span> <span style=color:#66d9ef>static</span> <span style=color:#66d9ef>implicit</span> <span style=color:#66d9ef>operator</span> Result&lt;T&gt;(Error error)
+    {
+        <span style=color:#66d9ef>return</span> <span style=color:#66d9ef>new</span> Result&lt;T&gt;(error);
+    }
+
+    <span style=color:#66d9ef>public</span> <span style=color:#66d9ef>static</span> <span style=color:#66d9ef>implicit</span> <span style=color:#66d9ef>operator</span> Result&lt;T&gt;(Error[] errors)
+    {
+        <span style=color:#66d9ef>return</span> <span style=color:#66d9ef>new</span> Result&lt;T&gt;(errors);
+    }
+
+    <span style=color:#66d9ef>public</span> <span style=color:#66d9ef>void</span> Deconstruct(<span style=color:#66d9ef>out</span> T? data, <span style=color:#66d9ef>out</span> IEnumerable&lt;Error&gt; errors)
+    {
+        data = <span style=color:#66d9ef>this</span>.data;
+        errors = <span style=color:#66d9ef>this</span>.errors;
+    }
+
+}
+</code></pre></div><p>We will go through some key features to achieve what we saw in the example reference.</p>
+<h3 id=implicit-operators>implicit operators</h3>
+<div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-cs data-lang=cs><span style=color:#66d9ef>public</span> <span style=color:#66d9ef>static</span> <span style=color:#66d9ef>implicit</span> <span style=color:#66d9ef>operator</span> Result&lt;T&gt;(T data)
+{
+    <span style=color:#66d9ef>return</span> <span style=color:#66d9ef>new</span> Result&lt;T&gt;(data);
+}
+
+<span style=color:#66d9ef>public</span> <span style=color:#66d9ef>static</span> <span style=color:#66d9ef>implicit</span> <span style=color:#66d9ef>operator</span> Result&lt;T&gt;(Error error)
+{
+    <span style=color:#66d9ef>return</span> <span style=color:#66d9ef>new</span> Result&lt;T&gt;(error);
+}
+
+<span style=color:#66d9ef>public</span> <span style=color:#66d9ef>static</span> <span style=color:#66d9ef>implicit</span> <span style=color:#66d9ef>operator</span> Result&lt;T&gt;(Error[] errors)
+{
+    <span style=color:#66d9ef>return</span> <span style=color:#66d9ef>new</span> Result&lt;T&gt;(errors);
+}
+</code></pre></div><p>Implicit operators allow us to automatically convert an instance of T or Error when you assign or return to a type Result<t></p>
+<h3 id=deconstructor>Deconstructor</h3>
+<div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-cs data-lang=cs><span style=color:#66d9ef>public</span> <span style=color:#66d9ef>void</span> Deconstruct(<span style=color:#66d9ef>out</span> T? data, <span style=color:#66d9ef>out</span> IEnumerable&lt;Error&gt; errors)
+{
+    data = <span style=color:#66d9ef>this</span>.data;
+    errors = <span style=color:#66d9ef>this</span>.errors;
+}
+</code></pre></div><p>This allows us to unpack a result object into a tuple (data, errors), which in turn allows us to have
+a go-style way of error handling.</p>
+<p>And that completes the stack. Ironically, you can just have your functions return the tuple (T,
+errors) to begin with.</p>
+</div>
+<script src=https://giscus.app/client.js data-repo=kat-lego/kat-lego.github.io data-repo-id=R_kgDONnK4DQ data-category=General data-category-id=DIC_kwDONnK4Dc4Cq5bt data-mapping=pathname data-strict=0 data-reactions-enabled=1 data-emit-metadata=0 data-input-position=bottom data-theme=transparent_dark data-lang=en crossorigin=anonymous async></script>
+<footer class=content__footer></footer>
+</section>
+<section class=page__aside>
+<div class=aside__about>
+<div class=aside__about>
+<span class=about__logo role=img>🍚</span>&nbsp;
+<h1 class=about__title>kat stack</h1>
+<p class=about__description>a kat stacked upon itself shall not stand</p>
+</div>
+<ul class=aside__social-links>
+<li>
+<a href=https://github.com/kat-lego rel=me aria-label=GitHub title=GitHub><i class="fa-brands fa-github" aria-hidden=true></i></a>&nbsp;
+</li>
+</ul>
+</div>
+<hr>
+<div class=aside__content>
+<p>yet another result type for c#</p>
+<p>
+By katlego modupi,
+2025-05-25
+</p>
+</div>
+</section>
+<footer class=page__footer><p>
+</p>
+<br><br>
+<p class=copyright></p>
+<p class=advertisement>Powered by <a href=https://gohugo.io/>hugo</a> and <a href=https://github.com/joeroe/risotto>risotto</a>.</p>
+</footer>
+</div>
+</body>
+</html>
