@@ -1,0 +1,385 @@
+<!doctype html><html lang=en>
+<head><title>acc laptime tracker &ndash; kat stack</title>
+<meta name=description content="a kat stacked upon itself shall not stand">
+<meta name=viewport content="width=device-width,initial-scale=1">
+<meta charset=utf-8>
+<link rel=stylesheet href=https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css integrity="sha512-Kc323vGBEqzTmouAECnVceyQqyqdsSiqLQISBL29aUW4U/M7pSPA/gEUZQqv1cwx4OnYxTxve5UMg5GT6L4JJg==" crossorigin=anonymous referrerpolicy=no-referrer>
+<link rel=stylesheet href=https://cdnjs.cloudflare.com/ajax/libs/academicons/1.9.4/css/academicons.min.css integrity="sha512-IW0nhlW5MgNydsXJO40En2EoCkTTjZhI3yuODrZIc8cQ4h1XcF53PsqDHa09NqnkXuIe0Oiyyj171BqZFwISBw==" crossorigin=anonymous referrerpolicy=no-referrer>
+<link rel=stylesheet href=https://blog.katlegomodupi.com/css/palettes/base16-dark.css>
+<link rel=stylesheet href=https://blog.katlegomodupi.com/css/risotto.css>
+<link rel=stylesheet href=https://blog.katlegomodupi.com/css/custom.css>
+</head>
+<body>
+<div class=page>
+<header class=page__header><nav class="page__nav main-nav">
+<ul>
+<li class=nomarker><h1 class=page__logo><a href=https://blog.katlegomodupi.com/ class=page__logo-inner>kat stack</a></h1></li>
+<li class=main-nav__item><a class="nav-main-item active" href=https://blog.katlegomodupi.com/post/ title=Posts>Posts</a></li>
+</ul>
+</nav>
+</header>
+<section class=page__body>
+<header class=content__header>
+<h1>acc laptime tracker</h1>
+</header>
+<div class=content__body>
+<p>Building a program to track my lap times in assetto corsa competizione.</p>
+<p><a href=https://github.com/kat-lego/acc-laptime-tracker><img src="https://img.shields.io/badge/acc_laptime_tracker-gray?logo=github" alt="github repo"></a>
+<a href=https://acc.katlegomodupi.com><img src="https://img.shields.io/badge/sessions-gray?logo=google-chrome" alt="github repo"></a></p>
+<p>Sometime last year, I decided to invest money in Assetto Corsa Competizione and a racing wheel. I
+have had a hard time investing the time it takes to &lsquo;git gud&rsquo;. Now is the time I feed into my
+delusions of grandeur and top the lap times. But first, I will need a bespoke lap time tracker.</p>
+<h2 id=why>why?</h2>
+<p>Glory, Fame and Prestige.</p>
+<p>Or at the very least, I’d like to feel like I’m getting my money’s worth out of my racing wheel setup.
+There is just something about being able to visualize your improvement in something and this is my
+attempt to replicate that.</p>
+<h2 id=requirements>requirements</h2>
+<p>At a high level, I need the following:</p>
+<ul>
+<li>Read telemetry data from ACC: The game exposes data through a shared memory interface. I&rsquo;ll use
+that to read things like current lap time, session state, and car info.</li>
+<li>Detect new sessions, laps and lap sectors</li>
+<li>Persist the data: I want to store lap times in a database.</li>
+<li>Show progress: present the metrics on a static web application</li>
+</ul>
+<h2 id=the-stack>the stack</h2>
+<p>In this stack, I will be using go to build the program because of reasons. The stack will highlight
+the different components involved in the solution and describe each to varying levels of details.
+Overall we will have the following components:</p>
+<ul>
+<li>a program that will be reading (and saving) the session data,</li>
+<li>an API to fetch session data</li>
+<li>and a website to display the data</li>
+</ul>
+<h3 id=live-data>live data</h3>
+<p>As mentioned, ACC exposes its game data through a shared memory interface. The interface consists of
+3 memory-mapped files the game creates.</p>
+<h4 id=memory-mapped-file>memory mapped file</h4>
+<p>A memory-mapped file is a mechanism that maps the contents of a file (or a portion of it) directly
+into a process&rsquo;s virtual memory space. This allows the application to read from and write to the
+file as if it were accessing regular memory (RAM) rather than using traditional file I/O functions
+like <code>read()</code> or <code>write()</code>.</p>
+<p>Here is how it works:</p>
+<ul>
+<li>Given the file you want to map</li>
+</ul>
+<pre tabindex=0><code>+-----------------------+
+|    File: data.bin     |
++-----------------------+
+| Page 0 | Page 1 | ... |
++-----------------------+
+</code></pre><ul>
+<li>The OS maps the file (or a portion) into the process’s virtual memory:</li>
+</ul>
+<pre tabindex=0><code>Process Virtual Address Space
++---------------------------------------------+
+|   ...   | 0x1000 | 0x1001 | ... | 0x1FFF    |
++---------------------------------------------+
+             ▲
+             │
+    File content appears here (read/write like an array)
+</code></pre><ul>
+<li>The virtual address space is backed by physical RAM.</li>
+</ul>
+<pre tabindex=0><code>+-------------------------+     +-------------------------+
+|   Virtual Address:      |     |  Physical RAM Page:     |
+|     0x1000 → 0x1FFF     | --&gt; |  Loaded from disk page  |
+|                         |     |                         |
++-------------------------+     +-------------------------+
+</code></pre><ul>
+<li>
+<p>If you access a region that hasn’t been loaded yet, the OS will:</p>
+<ul>
+<li>Trigger a page fault</li>
+<li>Load the required part of the file into RAM</li>
+<li>Update the page table to reflect this mapping</li>
+</ul>
+</li>
+<li>
+<p>ACC uses a non-persistent memory file, which means the file only exists on physical RAM.</p>
+</li>
+</ul>
+<h4 id=shared-memory-interface-overview>shared memory interface overview</h4>
+<p>The Assetto Corsa Competizione shared memory interface provides 3 memory files, being:</p>
+<ul>
+<li><strong><code>physics</code></strong>: contains data about the car&rsquo;s physics state (e.g., suspension, tire slip, speed, G-forces).</li>
+<li><strong><code>graphics</code></strong>: focuses on session-level data and what is rendered on screen, such as lap times, positions, and session state.</li>
+<li><strong><code>static</code></strong>: holds information that doesn&rsquo;t change during a session, like car model, track name, and max values for power or fuel.</li>
+</ul>
+<p>You can find the full documentation on this blog post <a href=https://www.assettocorsa.net/forum/index.php?threads/acc-shared-memory-documentation.59965/>ACC Shared Memory Documentation</a>.</p>
+<h4 id=reading-from-the-file>reading from the file</h4>
+<p>This is how we will be reading the data from ACC&rsquo;s shared memory. We will define the following
+function that will read from the named file and return an instance of type T</p>
+<div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-go data-lang=go><span style=color:#66d9ef>func</span> <span style=color:#a6e22e>ReadSharedMemoryStruct</span>[<span style=color:#a6e22e>T</span> <span style=color:#a6e22e>any</span>](<span style=color:#a6e22e>name</span> <span style=color:#66d9ef>string</span>) (<span style=color:#f92672>*</span><span style=color:#a6e22e>T</span>, <span style=color:#66d9ef>error</span>)
+</code></pre></div><ol>
+<li>
+<p>Load Windows kernel dll to get access to <code>OpenFileMappingW</code> and <code>MapViewOfFile</code> from the
+windows api</p>
+</li>
+<li>
+<p>Use Open the shared memory file exposed by the game (via Windows' <code>CreateFileMappingW</code> )</p>
+</li>
+<li>
+<p>Map the data to the program&rsquo;s virtual memory (via Windows <code>MapViewOfFile</code>)</p>
+</li>
+<li>
+<p>Cast the raw byte slice to a struct.</p>
+</li>
+</ol>
+<p>All in all the function looks as follows</p>
+<div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-go data-lang=go><span style=color:#66d9ef>var</span> (
+	<span style=color:#a6e22e>kernel32</span>            = <span style=color:#a6e22e>syscall</span>.<span style=color:#a6e22e>NewLazyDLL</span>(<span style=color:#e6db74>&#34;kernel32.dll&#34;</span>)
+	<span style=color:#a6e22e>procOpenFileMapping</span> = <span style=color:#a6e22e>kernel32</span>.<span style=color:#a6e22e>NewProc</span>(<span style=color:#e6db74>&#34;OpenFileMappingW&#34;</span>)
+	<span style=color:#a6e22e>procMapViewOfFile</span>   = <span style=color:#a6e22e>kernel32</span>.<span style=color:#a6e22e>NewProc</span>(<span style=color:#e6db74>&#34;MapViewOfFile&#34;</span>)
+	<span style=color:#a6e22e>procUnmapViewOfFile</span> = <span style=color:#a6e22e>kernel32</span>.<span style=color:#a6e22e>NewProc</span>(<span style=color:#e6db74>&#34;UnmapViewOfFile&#34;</span>)
+	<span style=color:#a6e22e>procCloseHandle</span>     = <span style=color:#a6e22e>kernel32</span>.<span style=color:#a6e22e>NewProc</span>(<span style=color:#e6db74>&#34;CloseHandle&#34;</span>)
+)
+
+<span style=color:#66d9ef>const</span> (
+	<span style=color:#a6e22e>FILE_MAP_READ</span> = <span style=color:#ae81ff>0x0004</span>
+)
+
+<span style=color:#66d9ef>func</span> <span style=color:#a6e22e>ReadSharedMemoryStruct</span>[<span style=color:#a6e22e>T</span> <span style=color:#a6e22e>any</span>](<span style=color:#a6e22e>name</span> <span style=color:#66d9ef>string</span>) (<span style=color:#f92672>*</span><span style=color:#a6e22e>T</span>, <span style=color:#66d9ef>error</span>) {
+	<span style=color:#a6e22e>namePtr</span>, <span style=color:#a6e22e>err</span> <span style=color:#f92672>:=</span> <span style=color:#a6e22e>syscall</span>.<span style=color:#a6e22e>UTF16PtrFromString</span>(<span style=color:#a6e22e>name</span>)
+	<span style=color:#66d9ef>if</span> <span style=color:#a6e22e>err</span> <span style=color:#f92672>!=</span> <span style=color:#66d9ef>nil</span> {
+		<span style=color:#66d9ef>return</span> <span style=color:#66d9ef>nil</span>, <span style=color:#a6e22e>fmt</span>.<span style=color:#a6e22e>Errorf</span>(<span style=color:#e6db74>&#34;failed to encode name: %w\n&#34;</span>, <span style=color:#a6e22e>err</span>)
+	}
+
+	<span style=color:#a6e22e>hMap</span>, <span style=color:#a6e22e>_</span>, <span style=color:#a6e22e>callErr</span> <span style=color:#f92672>:=</span> <span style=color:#a6e22e>procOpenFileMapping</span>.<span style=color:#a6e22e>Call</span>(
+		<span style=color:#a6e22e>FILE_MAP_READ</span>,
+		<span style=color:#ae81ff>0</span>,
+		uintptr(<span style=color:#a6e22e>unsafe</span>.<span style=color:#a6e22e>Pointer</span>(<span style=color:#a6e22e>namePtr</span>)),
+	)
+	<span style=color:#66d9ef>if</span> <span style=color:#a6e22e>hMap</span> <span style=color:#f92672>==</span> <span style=color:#ae81ff>0</span> {
+		<span style=color:#66d9ef>return</span> <span style=color:#66d9ef>nil</span>, <span style=color:#a6e22e>fmt</span>.<span style=color:#a6e22e>Errorf</span>(<span style=color:#e6db74>&#34;OpenFileMappingW failed: %w\n&#34;</span>, <span style=color:#a6e22e>callErr</span>)
+	}
+	<span style=color:#66d9ef>defer</span> <span style=color:#a6e22e>procCloseHandle</span>.<span style=color:#a6e22e>Call</span>(<span style=color:#a6e22e>hMap</span>)
+
+	<span style=color:#a6e22e>structSize</span> <span style=color:#f92672>:=</span> <span style=color:#a6e22e>unsafe</span>.<span style=color:#a6e22e>Sizeof</span>(new(<span style=color:#a6e22e>T</span>))
+	<span style=color:#a6e22e>addr</span>, <span style=color:#a6e22e>_</span>, <span style=color:#a6e22e>callErr</span> <span style=color:#f92672>:=</span> <span style=color:#a6e22e>procMapViewOfFile</span>.<span style=color:#a6e22e>Call</span>(
+		<span style=color:#a6e22e>hMap</span>,
+		<span style=color:#a6e22e>FILE_MAP_READ</span>,
+		<span style=color:#ae81ff>0</span>,
+		<span style=color:#ae81ff>0</span>,
+		uintptr(<span style=color:#a6e22e>structSize</span>),
+	)
+	<span style=color:#66d9ef>if</span> <span style=color:#a6e22e>addr</span> <span style=color:#f92672>==</span> <span style=color:#ae81ff>0</span> {
+		<span style=color:#66d9ef>return</span> <span style=color:#66d9ef>nil</span>, <span style=color:#a6e22e>fmt</span>.<span style=color:#a6e22e>Errorf</span>(<span style=color:#e6db74>&#34;MapViewOfFile failed: %w\n&#34;</span>, <span style=color:#a6e22e>callErr</span>)
+	}
+	<span style=color:#66d9ef>defer</span> <span style=color:#a6e22e>procUnmapViewOfFile</span>.<span style=color:#a6e22e>Call</span>(<span style=color:#a6e22e>addr</span>)
+
+	<span style=color:#a6e22e>value</span> <span style=color:#f92672>:=</span> <span style=color:#f92672>*</span>(<span style=color:#f92672>*</span><span style=color:#a6e22e>T</span>)(<span style=color:#a6e22e>unsafe</span>.<span style=color:#a6e22e>Pointer</span>(<span style=color:#a6e22e>addr</span>))
+	<span style=color:#66d9ef>return</span> <span style=color:#f92672>&amp;</span><span style=color:#a6e22e>value</span>, <span style=color:#66d9ef>nil</span>
+}
+</code></pre></div><h3 id=tracking-sessions>tracking sessions</h3>
+<p>To track the session data, the program reads the memory mapped files from the graphics, and static
+info interfaces. We aggregate all the information into one struct that looks as follows.</p>
+<div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-go data-lang=go><span style=color:#66d9ef>type</span> <span style=color:#a6e22e>AccGameState</span> <span style=color:#66d9ef>struct</span> {
+	<span style=color:#a6e22e>SharedMemoryVersion</span> <span style=color:#66d9ef>string</span> <span style=color:#e6db74>`json:&#34;sharedMemoryVersion&#34;`</span>
+	<span style=color:#a6e22e>AssettoCorsaVersion</span> <span style=color:#66d9ef>string</span> <span style=color:#e6db74>`json:&#34;assettoCorsaVersion&#34;`</span>
+
+	<span style=color:#a6e22e>Status</span>       <span style=color:#66d9ef>string</span>  <span style=color:#e6db74>`json:&#34;status&#34;`</span>
+	<span style=color:#a6e22e>SessionType</span>  <span style=color:#66d9ef>string</span>  <span style=color:#e6db74>`json:&#34;sessionType&#34;`</span>
+	<span style=color:#a6e22e>Track</span>        <span style=color:#66d9ef>string</span>  <span style=color:#e6db74>`json:&#34;track&#34;`</span>
+	<span style=color:#a6e22e>CarModel</span>     <span style=color:#66d9ef>string</span>  <span style=color:#e6db74>`json:&#34;carModel&#34;`</span>
+	<span style=color:#a6e22e>SectorCount</span>  <span style=color:#66d9ef>int32</span>   <span style=color:#e6db74>`json:&#34;sectorCount&#34;`</span>
+	<span style=color:#a6e22e>NumberOfCars</span> <span style=color:#66d9ef>int32</span>   <span style=color:#e6db74>`json:&#34;numberOfCars&#34;`</span>
+	<span style=color:#a6e22e>Clock</span>        <span style=color:#66d9ef>float32</span> <span style=color:#e6db74>`json:&#34;clock&#34;`</span>
+
+	<span style=color:#a6e22e>CompletedLaps</span>   <span style=color:#66d9ef>int32</span> <span style=color:#e6db74>`json:&#34;completedLaps&#34;`</span>
+	<span style=color:#a6e22e>BestLapTime</span>     <span style=color:#66d9ef>int32</span> <span style=color:#e6db74>`json:&#34;bestLapTime&#34;`</span>
+	<span style=color:#a6e22e>PreviousLapTime</span> <span style=color:#66d9ef>int32</span> <span style=color:#e6db74>`json:&#34;previousLapTime&#34;`</span>
+
+	<span style=color:#a6e22e>CurrentLapTime</span>     <span style=color:#66d9ef>int32</span> <span style=color:#e6db74>`json:&#34;currentLapTime&#34;`</span>
+	<span style=color:#a6e22e>CurrentSectorIndex</span> <span style=color:#66d9ef>int32</span> <span style=color:#e6db74>`json:&#34;sectorIndex&#34;`</span>
+	<span style=color:#a6e22e>PreviousSectorTime</span> <span style=color:#66d9ef>int32</span> <span style=color:#e6db74>`json:&#34;previousSectorTime&#34;`</span>
+	<span style=color:#a6e22e>IsValid</span>            <span style=color:#66d9ef>bool</span>  <span style=color:#e6db74>`json:&#34;isValid&#34;`</span>
+	<span style=color:#a6e22e>IsInPitLane</span>        <span style=color:#66d9ef>bool</span>  <span style=color:#e6db74>`json:&#34;isInPitLane&#34;`</span>
+	<span style=color:#a6e22e>IsInPit</span>            <span style=color:#66d9ef>bool</span>  <span style=color:#e6db74>`json:&#34;isInPit&#34;`</span>
+}
+</code></pre></div><p>I have implemented a service layer that maintains details of the current session. The current
+session, contains a list of laps and each lap has a list of sectors. This is how the session is
+modelled.</p>
+<div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-go data-lang=go><span style=color:#66d9ef>type</span> <span style=color:#a6e22e>Session</span> <span style=color:#66d9ef>struct</span> {
+	<span style=color:#a6e22e>Id</span>              <span style=color:#66d9ef>string</span> <span style=color:#e6db74>`json:&#34;id&#34;`</span>
+	<span style=color:#a6e22e>StartTime</span>       <span style=color:#66d9ef>int64</span>  <span style=color:#e6db74>`json:&#34;startTime&#34;`</span>
+	<span style=color:#a6e22e>SessionType</span>     <span style=color:#66d9ef>string</span> <span style=color:#e6db74>`json:&#34;sessionType&#34;`</span>
+	<span style=color:#a6e22e>Track</span>           <span style=color:#66d9ef>string</span> <span style=color:#e6db74>`json:&#34;track&#34;`</span>
+	<span style=color:#a6e22e>CarModel</span>        <span style=color:#66d9ef>string</span> <span style=color:#e6db74>`json:&#34;carModel&#34;`</span>
+	<span style=color:#a6e22e>NumberOfSectors</span> <span style=color:#66d9ef>int32</span>  <span style=color:#e6db74>`json:&#34;numberOfSectors&#34;`</span>
+	<span style=color:#a6e22e>CompletedLaps</span>   <span style=color:#66d9ef>int32</span>  <span style=color:#e6db74>`json:&#34;lapsCompleted&#34;`</span>
+	<span style=color:#a6e22e>BestLap</span>         <span style=color:#66d9ef>int32</span>  <span style=color:#e6db74>`json:&#34;bestLap&#34;`</span>
+	<span style=color:#a6e22e>IsActive</span>        <span style=color:#66d9ef>bool</span>   <span style=color:#e6db74>`json:&#34;isActive&#34;`</span>
+	<span style=color:#a6e22e>Player</span>          <span style=color:#66d9ef>string</span> <span style=color:#e6db74>`json:&#34;player&#34;`</span>
+
+	<span style=color:#a6e22e>Laps</span> []<span style=color:#f92672>*</span><span style=color:#a6e22e>Lap</span> <span style=color:#e6db74>`json:&#34;laps&#34;`</span>
+}
+
+<span style=color:#66d9ef>type</span> <span style=color:#a6e22e>Lap</span> <span style=color:#66d9ef>struct</span> {
+	<span style=color:#a6e22e>LapNumber</span> <span style=color:#66d9ef>int32</span> <span style=color:#e6db74>`json:&#34;lapNumber&#34;`</span>
+	<span style=color:#a6e22e>LapTime</span>   <span style=color:#66d9ef>int32</span> <span style=color:#e6db74>`json:&#34;lapTime&#34;`</span>
+	<span style=color:#a6e22e>LapDelta</span>  <span style=color:#66d9ef>int32</span> <span style=color:#e6db74>`json:&#34;lapDelta&#34;`</span>
+	<span style=color:#a6e22e>IsValid</span>   <span style=color:#66d9ef>bool</span>  <span style=color:#e6db74>`json:&#34;isValid&#34;`</span>
+	<span style=color:#a6e22e>IsActive</span>  <span style=color:#66d9ef>bool</span>  <span style=color:#e6db74>`json:&#34;isActive&#34;`</span>
+
+	<span style=color:#a6e22e>LapSectors</span> []<span style=color:#f92672>*</span><span style=color:#a6e22e>LapSector</span> <span style=color:#e6db74>`json:&#34;lapSectors&#34;`</span>
+}
+
+<span style=color:#66d9ef>type</span> <span style=color:#a6e22e>LapSector</span> <span style=color:#66d9ef>struct</span> {
+	<span style=color:#a6e22e>SectorNumber</span> <span style=color:#66d9ef>int32</span> <span style=color:#e6db74>`json:&#34;sectorNumber&#34;`</span>
+	<span style=color:#a6e22e>SectorTime</span>   <span style=color:#66d9ef>int32</span> <span style=color:#e6db74>`json:&#34;sectorTime&#34;`</span>
+	<span style=color:#a6e22e>IsActive</span>     <span style=color:#66d9ef>bool</span>  <span style=color:#e6db74>`json:&#34;isActive&#34;`</span>
+}
+
+</code></pre></div><p>In this we track the latest
+lap, and sector. I use the following logic to check if a new session, lap or sector has
+started or ended:</p>
+<p><strong><code>session</code></strong></p>
+<ul>
+<li>if the <code>CompletedLaps</code> from the new state data is less than the number of completed laps tracked in
+the current session, then we start a new session (and complete the old one)</li>
+<li>To complete the old session involves setting the session to <code>InActive</code> and tries to complete the
+last lap (refer to the next session on what completing a lap entails)</li>
+<li><code>NOTE</code>: one of the current shortfalls of this, is when I restart a session before completing a lap.
+(however this is not that bad)</li>
+</ul>
+<p><strong><code>lap</code></strong></p>
+<ul>
+<li>if the <code>CompletedLaps</code> is greater that the number of completed laps we are tracking the session,
+then we start a new lap (and complete the old one)</li>
+<li>to complete the old lap, we set the lap time to the <code>PreviousLapTime</code> from the <code>AccGameState</code>. We
+also set the sector time to <code>PreviousLapTime</code></li>
+</ul>
+<p><strong><code>sector</code></strong></p>
+<ul>
+<li>if the <code>CurrentSectorIndex</code> is different to the sector number we are tracking, then we start a
+new sector (and complete the old one)</li>
+<li>to complete the old sector, we set the sector time to the <code>PreviousSectorTime</code> from the
+<code>AccGameState</code>.</li>
+</ul>
+<p>Any time we complete and create or update session info, we update/write it to the database.</p>
+<h3 id=database>database</h3>
+<p>To persist the sessions, I decided on Google&rsquo;s Firestore database. This is a NoSql database which
+has a decent free allocation and should work for my small loads. The only operations we have
+currently is writing the sessions as well as reading the top n most recent sessions.</p>
+<h3 id=api>api</h3>
+<p>To make the lap data publicly accessible, I added an API hosted on hosted on google cloud run. The
+API is running on a docker container and was developed in go, using go gin as the web framework that
+handles the requests. All the API does is expose a GET endpoint which retrieves the 20 most recent
+session data and no more.</p>
+<h3 id=web-ui>web ui</h3>
+<p>As a way to present the data, I built a static website and hosted it with Google&rsquo;s firebase.
+In service of furthering my go theme, I have decided to choose the wrong tool for the job, Hugo.
+Hugo is an open-source static site generator and is serves as a backbone for this blog.</p>
+<p>Getting started with Hugo boils down to finding a theme you like and creating markdown files for your
+blog posts. Sadly that is the furthest I am willing to go in learning Hugo. I decided to use the
+risotto theme. Essentially this contains the html and css to style and structure the site. Here is
+how the folder structure looks.</p>
+<pre tabindex=0><code>my-hugo-site/
+├── assets/
+│   └── js/
+│       └── index.js          # JavaScript entry point
+│
+├── content/
+│   └── ...                   # Markdown content (e.g., blog, about)
+│
+├── layouts/
+│   ├── _default/
+│   │   ├── baseof.html       # Base template that other templates extend (layout skeleton)
+│   │   ├── single.html       # Default template for single content pages
+│   │   └── list.html         # Template for list-type pages (e.g., blog list)
+│   │
+│   ├── partials/
+│   │   ├── about.html        # Sidebar on the right of the page (amended to show list of sessions)
+│   │   ├── footer.html       # Footer partial
+│   │   ├── head.html         # Head tag content (meta, CSS includes)
+│   │   ├── header.html       # Header or navigation bar
+│   │   ├── lang.html         # Language switcher or language support partial
+│   │   └── main.html         # Partial added used to display session tables
+│
+├── static/
+│   └── ...                   # Static assets (CSS, JS, images, etc.)
+│
+├── config.toml               # Site configuration
+└── README.md                 # Project documentation
+
+</code></pre><p>The name of the game here is to embark on an operation to have a way to list my sessions and display
+a table of lap times for each table. Buckle up, this won&rsquo;t be pretty. Here is the operation
+procedure.</p>
+<ul>
+<li>Step 1: I decided to repurpose the about.html partial to render the list of sessions.</li>
+</ul>
+<div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-html data-lang=html>...
+&lt;<span style=color:#f92672>ul</span> <span style=color:#a6e22e>class</span><span style=color:#f92672>=</span><span style=color:#e6db74>&#34;aside__sessions-list&#34;</span> <span style=color:#a6e22e>id</span><span style=color:#f92672>=</span><span style=color:#e6db74>&#34;sessions-list&#34;</span>&gt;
+    <span style=color:#75715e>&lt;!-- Sessions will be populated by JavaScript --&gt;</span>
+&lt;/<span style=color:#f92672>ul</span>&gt;
+
+&lt;<span style=color:#f92672>style</span>&gt;
+    .<span style=color:#a6e22e>aside__sessions-list</span> <span style=color:#f92672>li</span>.<span style=color:#a6e22e>selected</span> {
+        <span style=color:#66d9ef>background-color</span>: <span style=color:#ae81ff>#e0f7fa</span>;
+        <span style=color:#66d9ef>font-weight</span>: <span style=color:#66d9ef>bold</span>;
+    }
+&lt;/<span style=color:#f92672>style</span>&gt;
+</code></pre></div><ul>
+<li>Step 2: Add a <code>main.html</code> partial to show a table of laps for a selected session, and update the
+<code>baseof.html</code> file to use this partial under the body content of a page.</li>
+</ul>
+<div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-html data-lang=html>&lt;<span style=color:#f92672>h1</span> <span style=color:#a6e22e>id</span><span style=color:#f92672>=</span><span style=color:#e6db74>&#34;session-title&#34;</span>&gt;
+    no session selected
+&lt;/<span style=color:#f92672>h1</span>&gt;
+
+
+&lt;<span style=color:#f92672>p</span> <span style=color:#a6e22e>id</span><span style=color:#f92672>=</span><span style=color:#e6db74>&#34;session-details&#34;</span> <span style=color:#a6e22e>style</span><span style=color:#f92672>=</span><span style=color:#e6db74>&#34;display: none;&#34;</span>&gt;
+    no date | session type
+&lt;/<span style=color:#f92672>p</span>&gt;
+
+&lt;<span style=color:#f92672>div</span> <span style=color:#a6e22e>class</span><span style=color:#f92672>=</span><span style=color:#e6db74>&#34;table-wrapper&#34;</span>&gt;
+    &lt;<span style=color:#f92672>table</span> <span style=color:#a6e22e>id</span><span style=color:#f92672>=</span><span style=color:#e6db74>&#34;laptimes-table&#34;</span> <span style=color:#a6e22e>style</span><span style=color:#f92672>=</span><span style=color:#e6db74>&#34;display: none; width: 100%;&#34;</span>&gt;
+        &lt;<span style=color:#f92672>thead</span>&gt;&lt;/<span style=color:#f92672>thead</span>&gt;
+        &lt;<span style=color:#f92672>tbody</span>&gt;&lt;/<span style=color:#f92672>tbody</span>&gt;
+    &lt;/<span style=color:#f92672>table</span>&gt;
+&lt;/<span style=color:#f92672>div</span>&gt;
+
+&lt;<span style=color:#f92672>p</span> <span style=color:#a6e22e>id</span><span style=color:#f92672>=</span><span style=color:#e6db74>&#34;no-data&#34;</span> <span style=color:#a6e22e>style</span><span style=color:#f92672>=</span><span style=color:#e6db74>&#34;display: none&#34;</span>&gt;No lap times available.&lt;/<span style=color:#f92672>p</span>&gt;
+</code></pre></div><ul>
+<li>Step 3: Add some JavaScript to fetch session data from the api and update the DOM to populate the
+list of sessions and the table of laps for a selected session.</li>
+</ul>
+<p>At the end we end up with a site build with vanilla JavaScript and HTML but with extra steps.</p>
+<p>And this completes the stack.</p>
+</div>
+<script src=https://giscus.app/client.js data-repo=kat-lego/kat-lego.github.io data-repo-id=R_kgDONnK4DQ data-category=General data-category-id=DIC_kwDONnK4Dc4Cq5bt data-mapping=pathname data-strict=0 data-reactions-enabled=1 data-emit-metadata=0 data-input-position=bottom data-theme=transparent_dark data-lang=en crossorigin=anonymous async></script>
+<footer class=content__footer></footer>
+</section>
+<section class=page__aside>
+<div class=aside__about>
+<div class=aside__about>
+<span class=about__logo role=img>🍚</span>&nbsp;
+<h1 class=about__title>kat stack</h1>
+<p class=about__description>a kat stacked upon itself shall not stand</p>
+</div>
+<ul class=aside__social-links>
+<li>
+<a href=https://github.com/kat-lego rel=me aria-label=GitHub title=GitHub><i class="fa-brands fa-github" aria-hidden=true></i></a>&nbsp;
+</li>
+</ul>
+</div>
+<hr>
+<div class=aside__content>
+<p>building a program to track my laptimes in assetto corsa competizione</p>
+<p>
+By katlego modupi,
+2025-06-01
+</p>
+</div>
+</section>
+<footer class=page__footer><p>
+</p>
+<br><br>
+<p class=copyright></p>
+<p class=advertisement>Powered by <a href=https://gohugo.io/>hugo</a> and <a href=https://github.com/joeroe/risotto>risotto</a>.</p>
+</footer>
+</div>
+</body>
+</html>
