@@ -5,7 +5,7 @@ date = "2025-06-01"
 description = "building a program to track my laptimes in assetto corsa competizione"
 draft = false
 tags = [
-    "go", "acc", "firebase"
+    "go", "acc", "google cloud"
 ]
 +++
 
@@ -23,24 +23,31 @@ delusions of grandeur and top the lap times. But first, I will need a bespoke la
 
 Glory, Fame and Prestige.
 
-Or at the very least, I’d like to feel like I’m getting my money’s worth out of my racing wheel setup. Tracking lap times isn’t just about stats — it’s a tool for improvement. Seeing my performance trends across different tracks, cars, or setups will help me understand what’s working and what’s not.
+Or at the very least, I’d like to feel like I’m getting my money’s worth out of my racing wheel setup.
+There is just something about being able to visualize your improvement in something and this is my
+attempt to replicate that.
 
 ## requirements
 
 At a high level, I need the following:
-* Read telemetry data from ACC: The game exposes data through a shared memory interface. I'll use that to read things like current lap time, session state, and car info.
+* Read telemetry data from ACC: The game exposes data through a shared memory interface. I'll use 
+  that to read things like current lap time, session state, and car info.
 * Detect new sessions, laps and lap sectors
-* Persist the data: I want to store lap times (and maybe car/track/session metadata) in the cloud — Firebase is a good fit for quick prototyping.
-* Show progress: present the metrics on a web application
+* Persist the data: I want to store lap times in a database.
+* Show progress: present the metrics on a static web application
 
 ## the stack
 
-In this stack, I will be using Golang to build the program. No justification will be given for this decision at this
-time.
+In this stack, I will be using go to build the program because of reasons. The stack will highlight
+the different components involved in the solution and describe each to varying levels of details.
+Overall we will have the following components:
+- a program that will be reading (and saving) the session data,
+- an API to fetch session data
+- and a website to display the data
 
 ### live data
 As mentioned, ACC exposes its game data through a shared memory interface. The interface consists of
-3 memory-mapped files it creates.
+3 memory-mapped files the game creates.
 
 #### memory mapped file
 A memory-mapped file is a mechanism that maps the contents of a file (or a portion of it) directly
@@ -268,9 +275,9 @@ handles the requests. All the API does is expose a GET endpoint which retrieves 
 session data and no more.
 
 ### web ui
-As a way to present the data, I built a static website. In service of furthering my go
-theme, I have decided to choose the wrong tool for the job, Hugo. Hugo is an open-source static site 
-generator and is serves as a backbone for this blog.
+As a way to present the data, I built a static website and hosted it with Google's firebase.
+In service of furthering my go theme, I have decided to choose the wrong tool for the job, Hugo.
+Hugo is an open-source static site  generator and is serves as a backbone for this blog.
 
 Getting started with Hugo boils down to finding a theme you like and creating markdown files for your 
 blog posts. Sadly that is the furthest I am willing to go in learning Hugo. I decided to use the 
